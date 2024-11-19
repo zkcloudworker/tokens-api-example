@@ -2,7 +2,6 @@ import { describe, expect, it } from "@jest/globals";
 import Client from "mina-signer";
 import { MinaTokensAPI } from "../src/api";
 import { TEST_ACCOUNTS, API_KEY } from "../env.json";
-import fs from "fs/promises";
 
 const api = new MinaTokensAPI({
   apiKey: API_KEY,
@@ -34,7 +33,6 @@ describe("MinaTokensAPI", () => {
     const status = await api.txStatus({
       hash: exampleHash,
     });
-    await fs.writeFile("status.json", JSON.stringify(status, null, 2));
     console.log(status);
   });
 

@@ -2,7 +2,7 @@ openapi: 3.0.0
 info:
   title: MinaTokens API
   description: API for interacting with Mina Fungible Tokens and NFTs.
-  version: 0.1.0
+  version: "0.1.1"
 servers:
   - url: https://minatokens.com/api/v1/
     description: devnet
@@ -22,13 +22,6 @@ paths:
         - Fungible Token
       summary: Get Token Info
       description: Retrieves detailed information about a Mina Fungible Token.
-      parameters:
-        - in: header
-          name: x-api-key
-          required: true
-          schema:
-            type: string
-          description: "API key for authorization. Contact support@zkcloudworker.com to get your API key"
       requestBody:
         required: true
         content:
@@ -59,13 +52,6 @@ paths:
         - NFT
       summary: Retrieve an NFT info
       description: Retrieves detailed information about a MinaNFT.
-      parameters:
-        - in: header
-          name: x-api-key
-          required: true
-          schema:
-            type: string
-          description: "API key for authorization. Contact support@zkcloudworker.com to get your API key"
       requestBody:
         required: true
         content:
@@ -91,13 +77,6 @@ paths:
         - Transaction
       summary: Build Deploy Token Transaction
       description: Builds a deploy token transaction for a new token.
-      parameters:
-        - in: header
-          name: x-api-key
-          required: true
-          schema:
-            type: string
-          description: "API key for authorization."
       requestBody:
         required: true
         content:
@@ -123,13 +102,6 @@ paths:
         - Transaction
       summary: Build Token Transaction
       description: Builds a token transaction (transfer or mint).
-      parameters:
-        - in: header
-          name: x-api-key
-          required: true
-          schema:
-            type: string
-          description: "API key for authorization."
       requestBody:
         required: true
         content:
@@ -155,13 +127,6 @@ paths:
         - Transaction
       summary: Prove Token Transaction
       description: Proves a token transaction and optionally sends it to the network.
-      parameters:
-        - in: header
-          name: x-api-key
-          required: true
-          schema:
-            type: string
-          description: "API key for authorization."
       requestBody:
         required: true
         content:
@@ -187,13 +152,6 @@ paths:
         - Transaction
       summary: Get Proving Job Result
       description: Retrieves the result of a proving job.
-      parameters:
-        - in: header
-          name: x-api-key
-          required: true
-          schema:
-            type: string
-          description: "API key for authorization."
       requestBody:
         required: true
         content:
@@ -219,13 +177,6 @@ paths:
         - Transaction
       summary: Request Funds from Faucet
       description: Requests funds from the faucet for testing purposes.
-      parameters:
-        - in: header
-          name: x-api-key
-          required: true
-          schema:
-            type: string
-          description: "API key for authorization."
       requestBody:
         required: true
         content:
@@ -251,13 +202,6 @@ paths:
         - Transaction
       summary: Get Transaction Status
       description: Retrieves the status of a transaction by hash.
-      parameters:
-        - in: header
-          name: x-api-key
-          required: true
-          schema:
-            type: string
-          description: "API key for authorization."
       requestBody:
         required: true
         content:
@@ -278,6 +222,12 @@ paths:
         "500":
           description: Server error
 components:
+  securitySchemes:
+    ApiKeyAuth:
+      type: apiKey
+      in: header
+      name: x-api-key
+      description: "API key for authorization. Get your API key at https://minatokens.com/api"
   schemas:
     TokenState:
       type: object
@@ -698,3 +648,5 @@ components:
       required:
         - hash
         - status
+security:
+  - ApiKeyAuth: []
