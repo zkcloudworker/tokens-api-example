@@ -2,7 +2,7 @@ openapi: 3.0.0
 info:
   title: MinaTokens API
   description: API for interacting with Mina Fungible Tokens and NFTs.
-  version: "0.2.0"
+  version: "0.1.1"
 servers:
   - url: https://minatokens.com/api/v1/
     description: devnet
@@ -10,13 +10,11 @@ servers:
     description: zeko
 tags:
   - name: Fungible Token
-    description: Fungible Token Requests
+    description: Fungible Tokens Endpoints
   - name: NFT
-    description: NFT Requests
+    description: NFT Endpoints
   - name: Transaction
-    description: Transaction Requests
-  - name: Faucet
-    description: Faucet Requests
+    description: Transaction Endpoints
 paths:
   /info:
     post:
@@ -53,7 +51,7 @@ paths:
       tags:
         - NFT
       summary: Retrieve an NFT info
-      description: Retrieves detailed information about a Mina NFT.
+      description: Retrieves detailed information about a MinaNFT.
       requestBody:
         required: true
         content:
@@ -76,9 +74,9 @@ paths:
   /deploy:
     post:
       tags:
-        - Fungible Token
-      summary: Build Fungible Token Deploy Transaction
-      description: Builds a deploy transaction for a new token.
+        - Transaction
+      summary: Build Deploy Token Transaction
+      description: Builds a deploy token transaction for a new token.
       requestBody:
         required: true
         content:
@@ -101,8 +99,8 @@ paths:
   /transaction:
     post:
       tags:
-        - Fungible Token
-      summary: Build Fungible Token Transaction
+        - Transaction
+      summary: Build Token Transaction
       description: Builds a token transaction (transfer or mint).
       requestBody:
         required: true
@@ -126,8 +124,8 @@ paths:
   /prove:
     post:
       tags:
-        - Fungible Token
-      summary: Prove Fungible Token Transaction
+        - Transaction
+      summary: Prove Token Transaction
       description: Proves a token transaction and optionally sends it to the network.
       requestBody:
         required: true
@@ -176,7 +174,7 @@ paths:
   /faucet:
     post:
       tags:
-        - Faucet
+        - Transaction
       summary: Request Funds from Faucet
       description: Requests funds from the faucet for testing purposes.
       requestBody:
@@ -421,14 +419,6 @@ components:
           type: string
           example: "Deploying TEST token"
           description: Optional memo for the transaction
-        nonce:
-          type: integer
-          example: 1
-          description: Optional nonce for the transaction
-        developerFee:
-          type: number
-          example: 0.1
-          description: Optional developer fee
       required:
         - adminAddress
         - symbol
@@ -437,125 +427,45 @@ components:
     DeployTransaction:
       type: object
       properties:
-        txType:
+        serializedTransaction:
           type: string
-          enum:
-            - deploy
-          example: deploy
-          description: Type of the transaction
-        senderAddress:
+        transaction:
           type: string
-          example: B62q...
-          description: The public key of the sender
-        tokenAddress:
-          type: string
-          example: B62q...
-          description: Token contract address
-        adminContractAddress:
-          type: string
-          example: B62q...
-          description: Admin contract address
-        symbol:
-          type: string
-          example: TEST
-          description: Token symbol
         tokenContractPrivateKey:
           type: string
-          example: "private-key-data"
-          description: Token contract private key
         adminContractPrivateKey:
           type: string
-          example: "private-key-data"
-          description: Admin contract private key
-        wallet_payload:
+        tokenAddress:
+          type: string
+        adminContractAddress:
+          type: string
+        payload:
           type: object
           properties:
             nonce:
               type: integer
-              example: 1
-              description: Transaction nonce
             transaction:
               type: string
-              example: "transaction-data"
-              description: Serialized transaction data
             onlySign:
               type: boolean
-              example: false
-              description: Indicates if only signing is required
             feePayer:
               type: object
               properties:
                 fee:
                   type: integer
-                  example: 1000000
-                  description: Transaction fee
                 memo:
                   type: string
-                  example: "Deploying token"
-                  description: Transaction memo
-        mina_signer_payload:
-          type: object
-          properties:
-            zkappCommand:
-              type: object
-              description: zkApp command data
-            feePayer:
-              type: object
-              properties:
-                feePayer:
-                  type: string
-                  example: B62q...
-                fee:
-                  type: integer
-                  example: 1000000
-                nonce:
-                  type: integer
-                  example: 1
-                memo:
-                  type: string
-                  example: "Deploying token"
-        serializedTransaction:
-          type: string
-          example: "serialized-transaction"
-          description: Base64 encoded serialized transaction
-        transaction:
-          type: string
-          example: "transaction-data"
-          description: Transaction data
         uri:
           type: string
-          example: https://minatokens.com
-          description: Token URI
-        memo:
-          type: string
-          example: "Deploying TEST token"
-          description: Optional memo
-        nonce:
-          type: integer
-          example: 1
-          description: Optional nonce
-        developerAddress:
-          type: string
-          example: B62q...
-          description: Developer's public key
-        developerFee:
-          type: number
-          example: 0.1
-          description: Optional developer fee
       required:
-        - txType
-        - senderAddress
-        - tokenAddress
-        - adminContractAddress
-        - symbol
-        - tokenContractPrivateKey
-        - adminContractPrivateKey
-        - wallet_payload
-        - mina_signer_payload
         - serializedTransaction
         - transaction
+        - tokenContractPrivateKey
+        - adminContractPrivateKey
+        - tokenAddress
+        - adminContractAddress
+        - payload
         - uri
-        - developerAddress
     TransactionTokenParams:
       type: object
       properties:
@@ -568,32 +478,32 @@ components:
           description: Type of transaction
         senderAddress:
           type: string
-          example: B62q...
+          example: B62qqyGUFDAiBtpYhy3MsorgQuR2VHSgJ8jEug2D9Px38bkGRTp8Kr5
           description: Public key of the sender
         tokenAddress:
           type: string
-          example: B62q...
+          example: B62qn25cKc4ipqJMCDSMENgsiFwL49vTdnsDXgWWKWFXQaY819rn848
           description: Address of the token
+        adminContractAddress:
+          type: string
+          example: B62qjpFSUnwHsYX1KuEfDHjPyg6AuWotyfRApGgpoj6bybvjjAriKHe
+          description: Address of the admin contract (required for mint)
         to:
           type: string
-          example: B62q...
+          example: B62qoT6jXebkJVmsUmxCxGJmvHJUXPNF417rms4PATi5R6Hw7e56CRt
           description: Recipient's public key
         amount:
           type: number
           example: 1000000000
           description: Amount to transfer or mint
-        nonce:
-          type: integer
-          example: 1
-          description: Optional nonce
+        symbol:
+          type: string
+          example: TEST
+          description: Symbol of the token
         memo:
           type: string
           example: "Test transaction"
-          description: Optional memo
-        developerFee:
-          type: number
-          example: 0.1
-          description: Optional developer fee
+          description: Optional memo for the transaction
       required:
         - txType
         - senderAddress
@@ -603,144 +513,81 @@ components:
     TokenTransaction:
       type: object
       properties:
-        txType:
+        serializedTransaction:
           type: string
-          enum:
-            - transfer
-            - mint
-          example: transfer
-          description: Type of transaction
-        senderAddress:
+        transaction:
           type: string
-          example: B62q...
-          description: Public key of the sender
         tokenAddress:
           type: string
-          example: B62q...
-          description: Address of the token
         adminContractAddress:
           type: string
-          example: B62q...
-          description: Admin contract address (required for mint)
-        symbol:
-          type: string
-          example: TEST
-          description: Symbol of the token
-        wallet_payload:
+        payload:
           type: object
           properties:
             nonce:
               type: integer
-              example: 1
-              description: Nonce for the transaction
             transaction:
               type: string
-              example: "transaction-data"
-              description: Serialized transaction data
             onlySign:
               type: boolean
-              example: false
-              description: Indicates if only signing is required
             feePayer:
               type: object
               properties:
                 fee:
                   type: integer
-                  example: 1000000
-                  description: Transaction fee
                 memo:
                   type: string
-                  example: "Token transaction"
-                  description: Transaction memo
-        mina_signer_payload:
-          type: object
-          properties:
-            zkappCommand:
-              type: object
-              description: zkApp command data
-            feePayer:
-              type: object
-              properties:
-                feePayer:
-                  type: string
-                  example: B62q...
-                fee:
-                  type: integer
-                  example: 1000000
-                nonce:
-                  type: integer
-                  example: 1
-                memo:
-                  type: string
-                  example: "Token transaction"
-        to:
-          type: string
-          example: B62q...
-          description: Recipient's public key
-        amount:
-          type: number
-          example: 1000000000
-          description: Amount to transfer or mint
-        memo:
-          type: string
-          example: "Test transaction"
-          description: Memo for the transaction
-        nonce:
-          type: integer
-          example: 1
-          description: Nonce for the transaction
-        serializedTransaction:
-          type: string
-          example: "serialized-transaction"
-          description: Base64 encoded serialized transaction
-        transaction:
-          type: string
-          example: "transaction-data"
-          description: Transaction data
-        developerAddress:
-          type: string
-          example: B62q...
-          description: Developer's public key
-        developerFee:
-          type: number
-          example: 0.1
-          description: Optional developer fee
       required:
-        - txType
-        - senderAddress
-        - tokenAddress
-        - wallet_payload
-        - mina_signer_payload
-        - to
-        - amount
-        - memo
-        - nonce
         - serializedTransaction
         - transaction
-        - developerAddress
+        - tokenAddress
+        - payload
     ProveTokenTransaction:
       type: object
       properties:
-        tx:
-          oneOf:
-            - $ref: "#/components/schemas/DeployTransaction"
-            - $ref: "#/components/schemas/TokenTransaction"
+        txType:
+          type: string
+          enum:
+            - deploy
+            - transfer
+            - mint
+          example: transfer
+        serializedTransaction:
+          type: string
         signedData:
           type: string
-          example: "signed-data"
+        senderAddress:
+          type: string
+        tokenAddress:
+          type: string
+        adminContractAddress:
+          type: string
+        symbol:
+          type: string
+        uri:
+          type: string
+          nullable: true
+        to:
+          type: string
+          nullable: true
+        amount:
+          type: number
+          nullable: true
         sendTransaction:
           type: boolean
-          example: true
-          description: Whether to send the transaction after proving
       required:
-        - tx
+        - txType
+        - serializedTransaction
         - signedData
+        - senderAddress
+        - tokenAddress
+        - symbol
+        - sendTransaction
     JobId:
       type: object
       properties:
         jobId:
           type: string
-          example: "job-id-string"
       required:
         - jobId
     TransactionResult:
@@ -748,22 +595,16 @@ components:
       properties:
         hash:
           type: string
-          example: "transaction-hash"
           nullable: true
         tx:
           type: string
-          example: "transaction-data"
-          nullable: true
-        jobStatus:
-          type: string
-          example: "completed"
           nullable: true
     FaucetParams:
       type: object
       properties:
         address:
           type: string
-          example: B62q...
+          example: B62qqyGUFDAiBtpYhy3MsorgQuR2VHSgJ8jEug2D9Px38bkGRTp8Kr5
       required:
         - address
     FaucetResponse:
@@ -774,7 +615,6 @@ components:
           example: true
         hash:
           type: string
-          example: "transaction-hash"
           nullable: true
     TransactionStatusParams:
       type: object

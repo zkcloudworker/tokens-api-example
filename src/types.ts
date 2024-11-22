@@ -1,11 +1,12 @@
 export interface DeployTransaction {
-  serializedTransaction: string;
-  transaction: string;
-  tokenContractPrivateKey: string;
-  adminContractPrivateKey: string;
+  txType: "deploy";
+  senderAddress: string;
   tokenAddress: string;
   adminContractAddress: string;
-  payload: {
+  symbol: string;
+  tokenContractPrivateKey: string;
+  adminContractPrivateKey: string;
+  wallet_payload: {
     nonce: number;
     transaction: string;
     onlySign: boolean;
@@ -14,7 +15,22 @@ export interface DeployTransaction {
       memo: string;
     };
   };
+  mina_signer_payload: {
+    zkappCommand: any;
+    feePayer: {
+      feePayer: string;
+      fee: number;
+      nonce: number;
+      memo: string;
+    };
+  };
+  serializedTransaction: string;
+  transaction: string;
   uri: string;
+  memo: string;
+  nonce: number;
+  developerAddress: string;
+  developerFee?: number;
 }
 
 export interface DeployTokenParams {
@@ -22,15 +38,18 @@ export interface DeployTokenParams {
   symbol: string;
   decimals: number;
   uri: string;
+  nonce?: number;
   memo?: string;
+  developerFee?: number;
 }
 
 export interface TokenTransaction {
-  serializedTransaction: string;
-  transaction: string;
+  txType: "transfer" | "mint";
+  senderAddress: string;
   tokenAddress: string;
   adminContractAddress: string;
-  payload: {
+  symbol: string;
+  wallet_payload: {
     nonce: number;
     transaction: string;
     onlySign: boolean;
@@ -39,17 +58,50 @@ export interface TokenTransaction {
       memo: string;
     };
   };
+  mina_signer_payload: {
+    zkappCommand: any;
+    feePayer: {
+      feePayer: string;
+      fee: number;
+      nonce: number;
+      memo: string;
+    };
+  };
+  to: string;
+  amount: number;
+  memo: string;
+  nonce: number;
+  serializedTransaction: string;
+  transaction: string;
+  developerAddress: string;
+  developerFee?: number;
+}
+
+export interface ProveTokenTransaction {
+  tx: DeployTransaction | TokenTransaction;
+  signedData: string;
+  sendTransaction?: boolean;
+}
+
+export interface JobId {
+  jobId: string;
+}
+
+export interface TransactionResult {
+  hash?: string;
+  tx?: string;
+  jobStatus?: string;
 }
 
 export interface TransactionTokenParams {
   txType: "transfer" | "mint";
   senderAddress: string;
   tokenAddress: string;
-  adminContractAddress?: string;
   to: string;
   amount: number;
-  symbol?: string;
+  nonce?: number;
   memo?: string;
+  developerFee?: number;
 }
 
 export interface TransactionStatusParams {
@@ -145,29 +197,9 @@ export interface FaucetResponse {
   hash?: string;
 }
 
-export interface ProveTokenTransaction {
-  txType: "deploy" | "transfer" | "mint";
-  serializedTransaction: string;
-  signedData: string;
-  senderAddress: string;
+export interface TokenStateRequestParams {
   tokenAddress: string;
-  adminContractAddress?: string;
-  symbol: string;
-  uri?: string;
-  to?: string;
-  amount?: number;
-  sendTransaction: boolean;
 }
-
-export interface JobId {
-  jobId: string;
-}
-
-export interface TransactionResult {
-  hash?: string;
-  tx?: string;
-}
-
 export interface TokenState {
   tokenAddress: string;
   tokenId: string;
@@ -234,6 +266,11 @@ export type ApiResponse<T> =
   | {
       /** Forbidden - user doesn't have permission */
       status: 403;
+      json: { error: string };
+    }
+  | {
+      /** Too many requests */
+      status: 429;
       json: { error: string };
     }
   | {
