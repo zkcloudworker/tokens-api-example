@@ -5,7 +5,7 @@ import { TEST_ACCOUNTS, API_KEY } from "../env.json";
 
 const api = new MinaTokensAPI({
   apiKey: API_KEY,
-  chain: "devnet",
+  chain: "zeko",
 });
 const client = new Client({ network: "testnet" });
 
@@ -15,6 +15,8 @@ const exampleJobId = "zkCWVpacSHOyxrVphliRKWnzcieXdPiHbR1eJYpP2Q0wBTF0";
 const exampleHash = "5JuEaWqCkiizzjA3mjrva5hjYeohiGKQFcffUdZxrEJM4xDirhK1";
 const exampleNFTAddress =
   "B62qoT6jXebkJVmsUmxCxGJmvHJUXPNF417rms4PATi5R6Hw7e56CRt";
+let offer: string | undefined = undefined;
+let bid: string | undefined = undefined;
 
 describe("MinaTokensAPI", () => {
   let tokenAddress: string | undefined = undefined;
@@ -22,10 +24,26 @@ describe("MinaTokensAPI", () => {
   const users = TEST_ACCOUNTS;
   const admin = users[0];
   const tokenHolders = users.slice(1);
+
+  const useWhitelists = true;
+  const whitelist = useWhitelists
+    ? [
+        { address: tokenHolders[0].publicKey, amount: 1000_000_000_000 },
+        { address: tokenHolders[1].publicKey, amount: 1000_000_000_000 },
+        { address: tokenHolders[2].publicKey, amount: 1000_000_000_000 },
+      ]
+    : undefined;
   const tokenSymbol = "TEST";
   const tokenDecimals = 9;
   const uri = "https://minatokens.com";
-  let step: "started" | "deployed" | "minted" | "transferred" = "started";
+  let step:
+    | "started"
+    | "deployed"
+    | "minted"
+    | "offered"
+    | "bought"
+    | "withdrawn"
+    | "transferred" = "started";
 
   it.skip(`should get transaction status`, async () => {
     console.log("Getting existing transaction status...");
@@ -78,6 +96,7 @@ describe("MinaTokensAPI", () => {
       symbol: tokenSymbol,
       decimals: tokenDecimals,
       uri,
+      whitelist,
     });
 
     const { adminContractAddress, mina_signer_payload } = tx;
@@ -112,10 +131,10 @@ describe("MinaTokensAPI", () => {
 
     const tx = await api.tokenTransaction({
       txType: "mint",
-      senderAddress: admin.publicKey,
+      from: admin.publicKey,
       tokenAddress,
       to: tokenHolders[0].publicKey,
-      amount: 100_000_000_000,
+      amount: 1000_000_000_000,
     });
 
     const proveTx = await api.proveTokenTransaction({
@@ -134,20 +153,137 @@ describe("MinaTokensAPI", () => {
     step = "minted";
   });
 
-  it(`should transfer token`, async () => {
+  it(`should offer token for sale`, async () => {
     expect(tokenAddress).toBeDefined();
     if (!tokenAddress) {
       throw new Error("Token not deployed");
     }
     expect(step).toBe("minted");
 
+    console.log("Building offer transaction...");
+
+    const tx = await api.tokenTransaction({
+      txType: "offer",
+      from: tokenHolders[0].publicKey,
+      tokenAddress,
+      amount: 500_000_000_000,
+      price: 100_000_000,
+      whitelist,
+    });
+    offer = tx.to;
+
+    const proveTx = await api.proveTokenTransaction({
+      tx,
+      signedData: JSON.stringify(
+        client.signTransaction(
+          tx.mina_signer_payload,
+          tokenHolders[0].privateKey
+        ).data
+      ),
+    });
+
+    const hash = await api.waitForJobResult(proveTx.jobId);
+    expect(hash).toBeDefined();
+    if (!hash) return;
+    await api.waitForTransaction(hash);
+    const tokenInfo = await api.getTokenInfo(tokenAddress);
+    console.log(tokenInfo);
+    console.log("Offer contract address:", offer);
+    step = "offered";
+  });
+
+  it(`should buy token`, async () => {
+    expect(tokenAddress).toBeDefined();
+    if (!tokenAddress) {
+      throw new Error("Token not deployed");
+    }
+    if (!offer) {
+      throw new Error("Token not offered");
+    }
+    expect(step).toBe("offered");
+
+    console.log("Building buy transaction...");
+
+    const tx = await api.tokenTransaction({
+      txType: "buy",
+      to: tokenHolders[1].publicKey,
+      tokenAddress,
+      from: offer,
+      amount: 10_000_000_000,
+    });
+
+    const proveTx = await api.proveTokenTransaction({
+      tx,
+      signedData: JSON.stringify(
+        client.signTransaction(
+          tx.mina_signer_payload,
+          tokenHolders[1].privateKey
+        ).data
+      ),
+    });
+
+    const hash = await api.waitForJobResult(proveTx.jobId);
+    expect(hash).toBeDefined();
+    if (!hash) return;
+    await api.waitForTransaction(hash);
+    const tokenInfo = await api.getTokenInfo(tokenAddress);
+    console.log(tokenInfo);
+    step = "bought";
+  });
+
+  it(`should withdraw token`, async () => {
+    expect(tokenAddress).toBeDefined();
+    if (!tokenAddress) {
+      throw new Error("Token not deployed");
+    }
+    if (!offer) {
+      throw new Error("Token not offered");
+    }
+    expect(step).toBe("bought");
+
+    console.log("Building withdraw transaction...");
+
+    const tx = await api.tokenTransaction({
+      txType: "withdrawOffer",
+      to: tokenHolders[0].publicKey,
+      tokenAddress,
+      from: offer,
+      amount: 490_000_000_000,
+    });
+
+    const proveTx = await api.proveTokenTransaction({
+      tx,
+      signedData: JSON.stringify(
+        client.signTransaction(
+          tx.mina_signer_payload,
+          tokenHolders[0].privateKey
+        ).data
+      ),
+    });
+
+    const hash = await api.waitForJobResult(proveTx.jobId);
+    expect(hash).toBeDefined();
+    if (!hash) return;
+    await api.waitForTransaction(hash);
+    const tokenInfo = await api.getTokenInfo(tokenAddress);
+    console.log(tokenInfo);
+    step = "withdrawn";
+  });
+
+  it(`should transfer token`, async () => {
+    expect(tokenAddress).toBeDefined();
+    if (!tokenAddress) {
+      throw new Error("Token not deployed");
+    }
+    expect(step).toBe("withdrawn");
+
     console.log("Building transfer transaction...");
 
     const tx = await api.tokenTransaction({
       txType: "transfer",
-      senderAddress: tokenHolders[0].publicKey,
+      from: tokenHolders[0].publicKey,
       tokenAddress,
-      to: tokenHolders[1].publicKey,
+      to: tokenHolders[2].publicKey,
       amount: 50_000_000_000,
     });
 
