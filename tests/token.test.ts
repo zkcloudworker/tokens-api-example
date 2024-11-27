@@ -118,7 +118,6 @@ describe("MinaTokensAPI", () => {
     );
     expect(nftInfo?.nftAddress).toBe(exampleNFTAddress);
   });
-  return;
 
   it.skip(`should call faucet`, async () => {
     const key = client.genKeys();
