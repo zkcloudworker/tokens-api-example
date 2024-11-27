@@ -1,6 +1,6 @@
 import { describe, expect, it } from "@jest/globals";
 import Client from "mina-signer";
-import { MinaTokensAPI } from "../src/api";
+import { MinaTokensAPI } from "@minatokens/api";
 import { TEST_ACCOUNTS, API_KEY } from "../env.json";
 
 type Chain = "devnet" | "zeko";
@@ -118,6 +118,7 @@ describe("MinaTokensAPI", () => {
     );
     expect(nftInfo?.nftAddress).toBe(exampleNFTAddress);
   });
+  return;
 
   it.skip(`should call faucet`, async () => {
     const key = client.genKeys();

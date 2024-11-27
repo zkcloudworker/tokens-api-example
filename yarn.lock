@@ -690,6 +690,13 @@ __metadata:
   languageName: node
   linkType: hard
 
+"@minatokens/api@npm:^0.1.0":
+  version: 0.1.0
+  resolution: "@minatokens/api@npm:0.1.0"
+  checksum: 10c0/1764472d1238d0d010032f511d9c467d51ac98c3963f2ed360e3be84a9a370e84ec39d1711319c183a310f92985847a6d5e774a27bb1359fc2254dbe5cb0104f
+  languageName: node
+  linkType: hard
+
 "@npmcli/agent@npm:^2.0.0":
   version: 2.2.2
   resolution: "@npmcli/agent@npm:2.2.2"
@@ -3330,6 +3337,7 @@ __metadata:
   resolution: "tokens-api-example@workspace:."
   dependencies:
     "@jest/globals": "npm:^29.7.0"
+    "@minatokens/api": "npm:^0.1.0"
     "@types/jest": "npm:^29.5.14"
     "@types/node": "npm:^22.10.0"
     jest: "npm:^29.7.0"
