@@ -120,9 +120,11 @@ export interface JobId {
   jobId: string;
 }
 
-export interface TransactionResult {
-  hash?: string;
+export interface JobResult {
+  success: boolean;
+  error?: string;
   tx?: string;
+  hash?: string;
   jobStatus?: string;
 }
 
@@ -137,6 +139,16 @@ export interface TransactionTokenParams {
   nonce?: number;
   memo?: string;
   developerFee?: number;
+}
+export interface BalanceRequestParams {
+  tokenAddress: string;
+  address: string;
+}
+
+export interface BalanceResponse {
+  tokenAddress: string;
+  address: string;
+  balance: number | null;
 }
 
 export interface TransactionStatusParams {

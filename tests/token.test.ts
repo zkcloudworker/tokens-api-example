@@ -5,16 +5,21 @@ import { TEST_ACCOUNTS, API_KEY } from "../env.json";
 
 const api = new MinaTokensAPI({
   apiKey: API_KEY,
-  chain: "zeko",
+  chain: "devnet",
 });
 const client = new Client({ network: "testnet" });
 
 const exampleTokenAddress =
   "B62qn25cKc4ipqJMCDSMENgsiFwL49vTdnsDXgWWKWFXQaY819rn848";
 const exampleJobId = "zkCWVpacSHOyxrVphliRKWnzcieXdPiHbR1eJYpP2Q0wBTF0";
+const exampleFailedJobId = "zkCWvcg1BiPdLmsyxexOkrC3qZfx2UdLan0JB30cKDYVeSMB";
 const exampleHash = "5JuEaWqCkiizzjA3mjrva5hjYeohiGKQFcffUdZxrEJM4xDirhK1";
 const exampleNFTAddress =
   "B62qoT6jXebkJVmsUmxCxGJmvHJUXPNF417rms4PATi5R6Hw7e56CRt";
+const exampleBalanceRequest = {
+  tokenAddress: "B62qqXt9jJANADWZM4ovXx2bVRrMyjc26J9kCBnLVQMzqMNmmhVj7p4",
+  address: TEST_ACCOUNTS[1].publicKey,
+};
 let offer: string | undefined = undefined;
 let bid: string | undefined = undefined;
 
@@ -53,12 +58,29 @@ describe("MinaTokensAPI", () => {
     expect(status?.status).toBe("applied");
   });
 
-  it.skip(`should get job result`, async () => {
+  it(`should get job result`, async () => {
     console.log("Getting existing job result...");
     const result = await api.proveJobResult({
       jobId: exampleJobId,
     });
     expect(result?.jobStatus).toBe("used");
+  });
+
+  it(`should get failed job result`, async () => {
+    console.log("Getting existing failed job result...");
+    const result = await api.proveJobResult({
+      jobId: exampleFailedJobId,
+    });
+    expect(result?.jobStatus).toBe("failed");
+  });
+
+  it(`should get token balance`, async () => {
+    console.log("Getting token balance...");
+    const result = await api.getBalance({
+      tokenAddress: "B62qouKMtMcUxabk72vwZS7tY3XYEca1CPKgXPfznCHUiVjP9E6xxQz",
+      address: "B62qmoZqbXP3zRDFiVhczH6XXzHN2jhEq6dT9XqZ4trc1Y8oXyCAJgK",
+    });
+    expect(result?.balance).toBe(940_000_000_000);
   });
 
   it.skip(`should get existing token info`, async () => {
@@ -151,6 +173,11 @@ describe("MinaTokensAPI", () => {
     const tokenInfo = await api.getTokenInfo(tokenAddress);
     console.log(tokenInfo);
     step = "minted";
+    const balance = await api.getBalance({
+      tokenAddress,
+      address: tokenHolders[0].publicKey,
+    });
+    console.log(`Balance of token holder 0:`, balance);
   });
 
   it(`should offer token for sale`, async () => {
@@ -190,6 +217,16 @@ describe("MinaTokensAPI", () => {
     console.log(tokenInfo);
     console.log("Offer contract address:", offer);
     step = "offered";
+    const balance = await api.getBalance({
+      tokenAddress,
+      address: tokenHolders[0].publicKey,
+    });
+    console.log(`Balance of ${tokenHolders[0].publicKey}:`, balance);
+    const balanceOffer = await api.getBalance({
+      tokenAddress,
+      address: offer,
+    });
+    console.log(`Balance of offer ${offer}:`, balanceOffer);
   });
 
   it(`should buy token`, async () => {
@@ -229,6 +266,16 @@ describe("MinaTokensAPI", () => {
     const tokenInfo = await api.getTokenInfo(tokenAddress);
     console.log(tokenInfo);
     step = "bought";
+    const balance = await api.getBalance({
+      tokenAddress,
+      address: tokenHolders[1].publicKey,
+    });
+    console.log(`Balance of buyer:`, balance);
+    const balanceOffer = await api.getBalance({
+      tokenAddress,
+      address: offer,
+    });
+    console.log(`Balance of offer:`, balanceOffer);
   });
 
   it(`should withdraw token`, async () => {
@@ -268,6 +315,16 @@ describe("MinaTokensAPI", () => {
     const tokenInfo = await api.getTokenInfo(tokenAddress);
     console.log(tokenInfo);
     step = "withdrawn";
+    const balance = await api.getBalance({
+      tokenAddress,
+      address: tokenHolders[0].publicKey,
+    });
+    console.log(`Balance of token holder 0:`, balance);
+    const balanceOffer = await api.getBalance({
+      tokenAddress,
+      address: offer,
+    });
+    console.log(`Balance of offer:`, balanceOffer);
   });
 
   it(`should transfer token`, async () => {
@@ -303,5 +360,15 @@ describe("MinaTokensAPI", () => {
     const tokenInfo = await api.getTokenInfo(tokenAddress);
     console.log(tokenInfo);
     step = "transferred";
+    const balance = await api.getBalance({
+      tokenAddress,
+      address: tokenHolders[0].publicKey,
+    });
+    console.log(`Balance of token holder 0:`, balance);
+    const balanceTransfer = await api.getBalance({
+      tokenAddress,
+      address: tokenHolders[2].publicKey,
+    });
+    console.log(`Balance of token holder 2:`, balanceTransfer);
   });
 });

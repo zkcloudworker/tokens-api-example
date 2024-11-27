@@ -4,7 +4,7 @@ import {
   JobId,
   ProveTokenTransaction,
   TokenTransaction,
-  TransactionResult,
+  JobResult,
   TransactionTokenParams,
   FaucetParams,
   FaucetResponse,
@@ -13,6 +13,8 @@ import {
   TokenState,
   NFTRequestAnswer,
   NFTRequestParams,
+  BalanceResponse,
+  BalanceRequestParams,
 } from "./types.js";
 
 export class MinaTokensAPI {
@@ -32,6 +34,13 @@ export class MinaTokensAPI {
     return this.apiCall<{ tokenAddress: string }, TokenState>({
       endpoint: "info",
       callParams: { tokenAddress },
+    });
+  }
+
+  getBalance(params: BalanceRequestParams) {
+    return this.apiCall<BalanceRequestParams, BalanceResponse>({
+      endpoint: "balance",
+      callParams: params,
     });
   }
 
@@ -64,7 +73,7 @@ export class MinaTokensAPI {
   }
 
   proveJobResult(params: JobId) {
-    return this.apiCall<JobId, TransactionResult>({
+    return this.apiCall<JobId, JobResult>({
       endpoint: "result",
       callParams: params,
     });
@@ -89,19 +98,19 @@ export class MinaTokensAPI {
     let errorCount = 0;
     const startTime = Date.now();
     console.log("Waiting for job result...");
-    let hash: string | undefined = undefined;
-    while (
-      !hash &&
-      errorCount < 100 &&
-      Date.now() - startTime < 1000 * 60 * 10
-    ) {
+    while (errorCount < 100 && Date.now() - startTime < 1000 * 60 * 10) {
       try {
         const jobResult = await this.proveJobResult({ jobId });
 
         if (jobResult.hash) {
-          hash = jobResult.hash;
+          const hash = jobResult.hash;
           console.log("Transaction hash:", hash);
           return hash;
+        }
+        const jobStatus = jobResult.jobStatus;
+        if (jobStatus === "failed") {
+          console.log(`Job ${jobId} failed`);
+          return undefined;
         }
       } catch (error) {
         errorCount++;
