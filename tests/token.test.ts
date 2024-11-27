@@ -3,9 +3,12 @@ import Client from "mina-signer";
 import { MinaTokensAPI } from "../src/api";
 import { TEST_ACCOUNTS, API_KEY } from "../env.json";
 
+type Chain = "devnet" | "zeko";
+const chain: Chain = "zeko" as Chain;
+
 const api = new MinaTokensAPI({
   apiKey: API_KEY,
-  chain: "devnet",
+  chain,
 });
 const client = new Client({ network: "testnet" });
 
@@ -50,7 +53,7 @@ describe("MinaTokensAPI", () => {
     | "withdrawn"
     | "transferred" = "started";
 
-  it.skip(`should get transaction status`, async () => {
+  it(`should get transaction status`, async () => {
     console.log("Getting existing transaction status...");
     const status = await api.txStatus({
       hash: exampleHash,
@@ -80,13 +83,27 @@ describe("MinaTokensAPI", () => {
       tokenAddress: "B62qouKMtMcUxabk72vwZS7tY3XYEca1CPKgXPfznCHUiVjP9E6xxQz",
       address: "B62qmoZqbXP3zRDFiVhczH6XXzHN2jhEq6dT9XqZ4trc1Y8oXyCAJgK",
     });
-    expect(result?.balance).toBe(940_000_000_000);
+    if (chain === "devnet") {
+      expect(result?.balance).toBe(940_000_000_000);
+    } else {
+      expect(result?.balance).toBe(null);
+    }
   });
 
-  it.skip(`should get existing token info`, async () => {
+  it(`should get existing token info`, async () => {
     console.log("Getting existing token info...");
-    const tokenInfo = await api.getTokenInfo(exampleTokenAddress);
-    expect(tokenInfo?.tokenAddress).toBe(exampleTokenAddress);
+
+    if (chain === "devnet") {
+      const tokenInfo = await api.getTokenInfo(exampleTokenAddress);
+      expect(tokenInfo?.tokenAddress).toBe(exampleTokenAddress);
+    } else {
+      const tokenInfo = await api.getTokenInfo(
+        "B62qphSRYqif9bPjw4Kg2G3CA7V7NzHqtpRzeXkY164n3C9jXqGAfkA"
+      );
+      expect(tokenInfo?.tokenAddress).toBe(
+        "B62qphSRYqif9bPjw4Kg2G3CA7V7NzHqtpRzeXkY164n3C9jXqGAfkA"
+      );
+    }
   });
 
   it.skip(`should get existing NFT info`, async () => {
@@ -178,6 +195,7 @@ describe("MinaTokensAPI", () => {
       address: tokenHolders[0].publicKey,
     });
     console.log(`Balance of token holder 0:`, balance);
+    expect(balance?.balance).toBe(1000_000_000_000);
   });
 
   it(`should offer token for sale`, async () => {
@@ -222,11 +240,13 @@ describe("MinaTokensAPI", () => {
       address: tokenHolders[0].publicKey,
     });
     console.log(`Balance of ${tokenHolders[0].publicKey}:`, balance);
+    expect(balance?.balance).toBe(500_000_000_000);
     const balanceOffer = await api.getBalance({
       tokenAddress,
       address: offer,
     });
     console.log(`Balance of offer ${offer}:`, balanceOffer);
+    expect(balanceOffer?.balance).toBe(500_000_000_000);
   });
 
   it(`should buy token`, async () => {
@@ -275,7 +295,9 @@ describe("MinaTokensAPI", () => {
       tokenAddress,
       address: offer,
     });
+    expect(balance?.balance).toBe(10_000_000_000);
     console.log(`Balance of offer:`, balanceOffer);
+    expect(balanceOffer?.balance).toBe(490_000_000_000);
   });
 
   it(`should withdraw token`, async () => {
@@ -320,11 +342,13 @@ describe("MinaTokensAPI", () => {
       address: tokenHolders[0].publicKey,
     });
     console.log(`Balance of token holder 0:`, balance);
+    expect(balance?.balance).toBe(990_000_000_000);
     const balanceOffer = await api.getBalance({
       tokenAddress,
       address: offer,
     });
     console.log(`Balance of offer:`, balanceOffer);
+    expect(balanceOffer?.balance).toBe(0);
   });
 
   it(`should transfer token`, async () => {
@@ -365,10 +389,12 @@ describe("MinaTokensAPI", () => {
       address: tokenHolders[0].publicKey,
     });
     console.log(`Balance of token holder 0:`, balance);
+    expect(balance?.balance).toBe(940_000_000_000);
     const balanceTransfer = await api.getBalance({
       tokenAddress,
       address: tokenHolders[2].publicKey,
     });
     console.log(`Balance of token holder 2:`, balanceTransfer);
+    expect(balanceTransfer?.balance).toBe(50_000_000_000);
   });
 });
