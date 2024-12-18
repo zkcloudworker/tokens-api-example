@@ -690,10 +690,10 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@minatokens/api@npm:^0.3.5":
-  version: 0.3.5
-  resolution: "@minatokens/api@npm:0.3.5"
-  checksum: 10c0/738330afbe292ebde6bf829bb7a7c2d0fd3f8aabfbee0ae3dfdba6781444e996a0c69102a9863791d13113a9d607d4ae8faa2c69b0efe7b2c468bcd7773bad36
+"@minatokens/api@npm:^0.7.0":
+  version: 0.7.0
+  resolution: "@minatokens/api@npm:0.7.0"
+  checksum: 10c0/3d1ab271ebfff14a30bfc51d91629e52d93aa664dfa85ac40c59ffff1fb353400e8a4343dc736981ea072d36b9ad1af02a127dc15048f924bcafd49786dbac88
   languageName: node
   linkType: hard
 
@@ -845,12 +845,12 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@types/node@npm:^22.10.1":
-  version: 22.10.1
-  resolution: "@types/node@npm:22.10.1"
+"@types/node@npm:^22.10.2":
+  version: 22.10.2
+  resolution: "@types/node@npm:22.10.2"
   dependencies:
     undici-types: "npm:~6.20.0"
-  checksum: 10c0/0fbb6d29fa35d807f0223a4db709c598ac08d66820240a2cd6a8a69b8f0bc921d65b339d850a666b43b4e779f967e6ed6cf6f0fca3575e08241e6b900364c234
+  checksum: 10c0/2c7b71a040f1ef5320938eca8ebc946e6905caa9bbf3d5665d9b3774a8d15ea9fab1582b849a6d28c7fc80756a62c5666bc66b69f42f4d5dafd1ccb193cdb4ac
   languageName: node
   linkType: hard
 
@@ -3337,9 +3337,9 @@ __metadata:
   resolution: "tokens-api-example@workspace:."
   dependencies:
     "@jest/globals": "npm:^29.7.0"
-    "@minatokens/api": "npm:^0.3.5"
+    "@minatokens/api": "npm:^0.7.0"
     "@types/jest": "npm:^29.5.14"
-    "@types/node": "npm:^22.10.1"
+    "@types/node": "npm:^22.10.2"
     jest: "npm:^29.7.0"
     mina-signer: "npm:^3.0.7"
     ts-jest: "npm:^29.2.5"

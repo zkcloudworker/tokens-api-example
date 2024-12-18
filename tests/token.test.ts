@@ -4,7 +4,7 @@ import { MinaTokensAPI } from "@minatokens/api";
 import { TEST_ACCOUNTS, API_KEY } from "../env.json";
 
 type Chain = "zeko" | "devnet";
-const chain: Chain = "zeko" as Chain;
+const chain: Chain = "devnet" as Chain;
 const debug = false;
 if (debug) {
   console.log("Debug mode enabled");
@@ -29,7 +29,7 @@ const exampleBalanceRequest = {
   address: TEST_ACCOUNTS[1].publicKey,
 };
 let offerAddress: string | undefined = undefined;
-let bid: string | undefined = undefined;
+let bidAddress: string | undefined = undefined;
 
 describe("MinaTokensAPI", () => {
   let tokenAddress: string | undefined = undefined;
@@ -52,13 +52,15 @@ describe("MinaTokensAPI", () => {
       ]
     : undefined;
   console.log("Whitelist:", whitelist);
-  const tokenSymbol = "DEC3";
+  const tokenSymbol = "TEST";
   const tokenDecimals = 9;
   const uri = "https://minatokens.com";
   let step:
     | "started"
     | "deployed"
     | "minted"
+    | "bid"
+    | "sold"
     | "offered"
     | "bought"
     | "withdrawn"
@@ -154,21 +156,19 @@ describe("MinaTokensAPI", () => {
     });
 
     const { minaSignerPayload } = tx;
-    if (!("adminContractAddress" in tx)) throw new Error("Token not deployed");
-    const adminContractAddress = tx.adminContractAddress;
-    tokenAddress = tx.tokenAddress;
+    if (!("adminContractAddress" in tx.request))
+      throw new Error("Token not deployed");
+    const adminContractAddress = tx.request.adminContractAddress;
+    tokenAddress = tx.request.tokenAddress;
+    if (!tokenAddress) throw new Error("Token not deployed");
     console.log("Token address:", tokenAddress);
     console.log("Admin contract address:", adminContractAddress);
 
-    const proveTx = await api.proveTransactions({
-      txs: [
-        {
-          tx,
-          signedData: JSON.stringify(
-            client.signTransaction(minaSignerPayload, admin.privateKey).data
-          ),
-        },
-      ],
+    const proveTx = await api.proveTransaction({
+      tx,
+      signedData: JSON.stringify(
+        client.signTransaction(minaSignerPayload, admin.privateKey).data
+      ),
     });
 
     const proofs = await api.waitForProofs(proveTx.jobId);
@@ -231,25 +231,71 @@ describe("MinaTokensAPI", () => {
     expect(balance?.balance).toBe(1000_000_000_000);
   });
 
-  it(`should offer token for sale`, async () => {
+  it(`should bid`, async () => {
     expect(tokenAddress).toBeDefined();
     if (!tokenAddress) {
       throw new Error("Token not deployed");
     }
     expect(step).toBe("minted");
 
-    console.log("Building offer transaction...");
+    console.log("Building bid transaction...");
 
     const tx = await api.buildTransaction({
-      txType: "offer",
-      sender: tokenHolders[0].publicKey,
+      txType: "bid",
+      sender: tokenHolders[4].publicKey,
       tokenAddress,
-      amount: 500_000_000_000,
+      amount: 100_000_000_000,
       price: 100_000_000,
       whitelist: useWhitelists ? whitelist : undefined,
     });
-    if (!("to" in tx)) throw new Error("Token not offered");
-    offerAddress = tx.to;
+    if (!("bidAddress" in tx.request)) throw new Error("Token not bid");
+    bidAddress = tx.request.bidAddress;
+    if (!bidAddress) throw new Error("Token not bid");
+
+    const proveTx = await api.proveTransaction({
+      tx,
+      signedData: JSON.stringify(
+        client.signTransaction(tx.minaSignerPayload, tokenHolders[4].privateKey)
+          .data
+      ),
+    });
+
+    const proofs = await api.waitForProofs(proveTx.jobId);
+    expect(proofs).toBeDefined();
+    if (!proofs) throw new Error("No proofs");
+    expect(proofs.length).toBe(1);
+    const hash = proofs[0];
+    expect(hash).toBeDefined();
+    if (!hash) return;
+    await api.waitForTransaction(hash);
+    console.log("Bid contract address:", bidAddress);
+    step = "bid";
+    const balance = await api.getBalance({
+      address: bidAddress,
+    });
+    console.log(`Balance of ${bidAddress}:`, balance);
+    expect(balance?.balance).toBe(10_000_000_000);
+  });
+
+  it(`should sell token`, async () => {
+    expect(tokenAddress).toBeDefined();
+    if (!tokenAddress) {
+      throw new Error("Token not deployed");
+    }
+    if (!bidAddress) {
+      throw new Error("Token not bid");
+    }
+    expect(step).toBe("bid");
+
+    console.log("Building sell transaction...");
+
+    const tx = await api.buildTransaction({
+      txType: "sell",
+      sender: tokenHolders[0].publicKey,
+      tokenAddress,
+      bidAddress,
+      amount: 5_000_000_000,
+    });
 
     const proveTx = await api.proveTransactions({
       txs: [
@@ -273,6 +319,58 @@ describe("MinaTokensAPI", () => {
     expect(hash).toBeDefined();
     if (!hash) return;
     await api.waitForTransaction(hash);
+    step = "sold";
+    const balance = await api.getBalance({
+      tokenAddress,
+      address: tokenHolders[0].publicKey,
+    });
+    console.log(`Balance of seller:`, balance);
+    const balanceBuyer = await api.getBalance({
+      tokenAddress,
+      address: tokenHolders[4].publicKey,
+    });
+    console.log(`Balance of buyer:`, balanceBuyer);
+    expect(balance?.balance).toBe(995_000_000_000);
+    expect(balanceBuyer?.balance).toBe(5_000_000_000);
+  });
+
+  it(`should offer token for sale`, async () => {
+    expect(tokenAddress).toBeDefined();
+    if (!tokenAddress) {
+      throw new Error("Token not deployed");
+    }
+    expect(step).toBe("sold");
+
+    console.log("Building offer transaction...");
+
+    const tx = await api.buildTransaction({
+      txType: "offer",
+      sender: tokenHolders[0].publicKey,
+      tokenAddress,
+      amount: 500_000_000_000,
+      price: 10_000_000_000,
+      whitelist: useWhitelists ? whitelist : undefined,
+    });
+    if (!("offerAddress" in tx.request)) throw new Error("Token not offered");
+    offerAddress = tx.request.offerAddress;
+    if (!offerAddress) throw new Error("Token not offered");
+
+    const proveTx = await api.proveTransaction({
+      tx,
+      signedData: JSON.stringify(
+        client.signTransaction(tx.minaSignerPayload, tokenHolders[0].privateKey)
+          .data
+      ),
+    });
+
+    const proofs = await api.waitForProofs(proveTx.jobId);
+    expect(proofs).toBeDefined();
+    if (!proofs) throw new Error("No proofs");
+    expect(proofs.length).toBe(1);
+    const hash = proofs[0];
+    expect(hash).toBeDefined();
+    if (!hash) return;
+    await api.waitForTransaction(hash);
     const tokenInfo = await api.getTokenInfo(tokenAddress);
     console.log(tokenInfo);
     console.log("Offer contract address:", offerAddress);
@@ -282,7 +380,7 @@ describe("MinaTokensAPI", () => {
       address: tokenHolders[0].publicKey,
     });
     console.log(`Balance of ${tokenHolders[0].publicKey}:`, balance);
-    expect(balance?.balance).toBe(500_000_000_000);
+    expect(balance?.balance).toBe(495_000_000_000);
     const balanceOffer = await api.getBalance({
       tokenAddress,
       address: offerAddress,
@@ -300,6 +398,13 @@ describe("MinaTokensAPI", () => {
       throw new Error("Token not offered");
     }
     expect(step).toBe("offered");
+    const balanceBefore = await api.getBalance({
+      address: tokenHolders[1].publicKey,
+    });
+    console.log(
+      `Balance of ${tokenHolders[1].publicKey} in MINA:`,
+      (balanceBefore?.balance ?? 0) / 1_000_000_000
+    );
 
     console.log("Building buy transaction...");
 
@@ -348,6 +453,18 @@ describe("MinaTokensAPI", () => {
     expect(balance?.balance).toBe(10_000_000_000);
     console.log(`Balance of offer:`, balanceOffer);
     expect(balanceOffer?.balance).toBe(490_000_000_000);
+    const balanceAfter = await api.getBalance({
+      address: tokenHolders[1].publicKey,
+    });
+    console.log(
+      `Balance of ${tokenHolders[1].publicKey} in MINA:`,
+      (balanceAfter?.balance ?? 0) / 1_000_000_000
+    );
+    console.log(
+      `Balance difference:`,
+      ((balanceAfter?.balance ?? 0) - (balanceBefore?.balance ?? 0)) /
+        1_000_000_000
+    );
   });
 
   it(`should withdraw token`, async () => {
@@ -400,7 +517,7 @@ describe("MinaTokensAPI", () => {
       address: tokenHolders[0].publicKey,
     });
     console.log(`Balance of token holder 0:`, balance);
-    expect(balance?.balance).toBe(990_000_000_000);
+    expect(balance?.balance).toBe(985_000_000_000);
     const balanceOffer = await api.getBalance({
       tokenAddress,
       address: offerAddress,
@@ -455,7 +572,7 @@ describe("MinaTokensAPI", () => {
       address: tokenHolders[0].publicKey,
     });
     console.log(`Balance of token holder 0:`, balance);
-    expect(balance?.balance).toBe(940_000_000_000);
+    expect(balance?.balance).toBe(935_000_000_000);
     const balanceTransfer = await api.getBalance({
       tokenAddress,
       address: tokenHolders[2].publicKey,
@@ -513,6 +630,6 @@ describe("MinaTokensAPI", () => {
       address: tokenHolders[0].publicKey,
     });
     console.log(`Balance of token holder 0:`, balance);
-    expect(balance?.balance).toBe(910_000_000_000);
+    expect(balance?.balance).toBe(905_000_000_000);
   });
 });
