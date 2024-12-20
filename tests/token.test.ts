@@ -1,20 +1,20 @@
 import { describe, expect, it } from "@jest/globals";
 import Client from "mina-signer";
-import { MinaTokensAPI } from "@minatokens/api";
+import * as api from "@minatokens/api";
 import { TEST_ACCOUNTS, API_KEY } from "../env.json";
 
 type Chain = "zeko" | "devnet";
 const chain: Chain = "devnet" as Chain;
+api.config({
+  apiKey: API_KEY,
+  chain,
+});
 const debug = false;
 if (debug) {
   console.log("Debug mode enabled");
   process.env.DEBUG = "true";
 }
 
-const api = new MinaTokensAPI({
-  apiKey: API_KEY,
-  chain,
-});
 const client = new Client({ network: "testnet" });
 
 const exampleTokenAddress =
@@ -70,37 +70,39 @@ describe("MinaTokensAPI", () => {
   it(`should get transaction status`, async () => {
     console.log("Getting existing transaction status...");
     const status = await api.txStatus({
-      hash: exampleHash,
+      body: { hash: exampleHash },
     });
-    expect(status?.status).toBe("applied");
+    expect(status?.data?.status).toBe("applied");
   });
 
   it(`should get job result`, async () => {
     console.log("Getting existing job result...");
     const result = await api.getProof({
-      jobId: exampleJobId,
+      body: { jobId: exampleJobId },
     });
-    expect(result?.jobStatus).toBe("used");
+    expect(result?.data?.jobStatus).toBe("used");
   });
 
   it(`should get failed job result`, async () => {
     console.log("Getting existing failed job result...");
     const result = await api.getProof({
-      jobId: exampleFailedJobId,
+      body: { jobId: exampleFailedJobId },
     });
-    expect(result?.jobStatus).toBe("failed");
+    expect(result?.data?.jobStatus).toBe("failed");
   });
 
   it(`should get token balance`, async () => {
     console.log("Getting token balance...");
-    const result = await api.getBalance({
-      tokenAddress: "B62qouKMtMcUxabk72vwZS7tY3XYEca1CPKgXPfznCHUiVjP9E6xxQz",
-      address: "B62qmoZqbXP3zRDFiVhczH6XXzHN2jhEq6dT9XqZ4trc1Y8oXyCAJgK",
+    const result = await api.getTokenBalance({
+      body: {
+        tokenAddress: "B62qouKMtMcUxabk72vwZS7tY3XYEca1CPKgXPfznCHUiVjP9E6xxQz",
+        address: "B62qmoZqbXP3zRDFiVhczH6XXzHN2jhEq6dT9XqZ4trc1Y8oXyCAJgK",
+      },
     });
     if (chain === "devnet") {
-      expect(result?.balance).toBe(940_000_000_000);
+      expect(result?.data?.balance).toBe(940_000_000_000);
     } else {
-      expect(result?.balance).toBe(null);
+      expect(result?.data?.balance).toBe(null);
     }
   });
 
@@ -108,13 +110,18 @@ describe("MinaTokensAPI", () => {
     console.log("Getting existing token info...");
 
     if (chain === "devnet") {
-      const tokenInfo = await api.getTokenInfo(exampleTokenAddress);
-      expect(tokenInfo?.tokenAddress).toBe(exampleTokenAddress);
+      const tokenInfo = await api.getTokenInfo({
+        body: { tokenAddress: exampleTokenAddress },
+      });
+      expect(tokenInfo?.data?.tokenAddress).toBe(exampleTokenAddress);
     } else {
-      const tokenInfo = await api.getTokenInfo(
-        "B62qphSRYqif9bPjw4Kg2G3CA7V7NzHqtpRzeXkY164n3C9jXqGAfkA"
-      );
-      expect(tokenInfo?.tokenAddress).toBe(
+      const tokenInfo = await api.getTokenInfo({
+        body: {
+          tokenAddress:
+            "B62qphSRYqif9bPjw4Kg2G3CA7V7NzHqtpRzeXkY164n3C9jXqGAfkA",
+        },
+      });
+      expect(tokenInfo?.data?.tokenAddress).toBe(
         "B62qphSRYqif9bPjw4Kg2G3CA7V7NzHqtpRzeXkY164n3C9jXqGAfkA"
       );
     }
@@ -122,21 +129,25 @@ describe("MinaTokensAPI", () => {
 
   it.skip(`should get existing NFT info`, async () => {
     console.log("Getting existing NFT info...");
-    const nftInfo = await api.getNFTInfo({
-      contractAddress:
-        "B62qs2NthDuxAT94tTFg6MtuaP1gaBxTZyNv9D3uQiQciy1VsaimNFT",
-      nftAddress: exampleNFTAddress,
+    const nftInfo = await api.getNftV2Info({
+      body: {
+        contractAddress:
+          "B62qs2NthDuxAT94tTFg6MtuaP1gaBxTZyNv9D3uQiQciy1VsaimNFT",
+        nftAddress: exampleNFTAddress,
+      },
     });
-    expect(nftInfo?.contractAddress).toBe(
+    expect(nftInfo?.data?.contractAddress).toBe(
       "B62qs2NthDuxAT94tTFg6MtuaP1gaBxTZyNv9D3uQiQciy1VsaimNFT"
     );
-    expect(nftInfo?.nftAddress).toBe(exampleNFTAddress);
+    expect(nftInfo?.data?.nftAddress).toBe(exampleNFTAddress);
   });
 
   it.skip(`should call faucet`, async () => {
     const key = client.genKeys();
     console.log("Calling faucet for key:", key);
-    const status = await api.faucet({ address: key.publicKey });
+    const status = await api.faucet({
+      body: { address: key.publicKey },
+    });
     console.log(`Faucet response for ${key.publicKey}:`, status);
   });
 
@@ -144,34 +155,45 @@ describe("MinaTokensAPI", () => {
     console.log("Deploying new token...");
     console.log("Admin address:", admin.publicKey);
 
-    const tx = await api.buildTransaction({
-      txType: "launch",
-      adminContract: useWhitelists ? "advanced" : "standard",
-      sender: admin.publicKey,
-      symbol: tokenSymbol,
-      decimals: tokenDecimals,
-      uri,
-      whitelist: useWhitelists ? whitelist : undefined,
-      canMint: "whitelist",
-    });
+    const tx = (
+      await api.launchToken({
+        body: {
+          adminContract: useWhitelists ? "advanced" : "standard",
+          sender: admin.publicKey,
+          symbol: tokenSymbol,
+          decimals: tokenDecimals,
+          uri,
+          whitelist: useWhitelists ? whitelist : undefined,
+          canMint: "whitelist",
+        },
+      })
+    ).data;
+    if (!tx) throw new Error("Token not deployed");
 
     const { minaSignerPayload } = tx;
-    if (!("adminContractAddress" in tx.request))
+    if (!tx.request || !("adminContractAddress" in tx.request))
       throw new Error("Token not deployed");
-    const adminContractAddress = tx.request.adminContractAddress;
-    tokenAddress = tx.request.tokenAddress;
+    const adminContractAddress = tx?.request?.adminContractAddress;
+    tokenAddress = tx?.request?.tokenAddress;
     if (!tokenAddress) throw new Error("Token not deployed");
     console.log("Token address:", tokenAddress);
     console.log("Admin contract address:", adminContractAddress);
 
-    const proveTx = await api.proveTransaction({
-      tx,
-      signedData: JSON.stringify(
-        client.signTransaction(minaSignerPayload, admin.privateKey).data
-      ),
-    });
+    const proveTx = (
+      await api.prove({
+        body: {
+          tx,
+          signedData: JSON.stringify(
+            client.signTransaction(minaSignerPayload as any, admin.privateKey)
+              .data
+          ),
+        },
+      })
+    ).data;
 
-    const proofs = await api.waitForProofs(proveTx.jobId);
+    if (!proveTx?.jobId) throw new Error("No jobId");
+
+    const proofs = await api.waitForProofs(proveTx?.jobId);
     expect(proofs).toBeDefined();
     if (!proofs) throw new Error("No proofs");
     expect(proofs.length).toBe(1);
@@ -179,8 +201,10 @@ describe("MinaTokensAPI", () => {
     expect(hash).toBeDefined();
     if (!hash) throw new Error("No hash");
     await api.waitForTransaction(hash);
-    const tokenInfo = await api.getTokenInfo(tokenAddress);
-    console.log(tokenInfo);
+    const tokenInfo = await api.getTokenInfo({
+      body: { tokenAddress },
+    });
+    console.log(tokenInfo?.data);
     step = "deployed";
   });
 
@@ -193,24 +217,32 @@ describe("MinaTokensAPI", () => {
 
     console.log("Building mint transaction...");
 
-    const tx = await api.buildTransaction({
-      txType: "mint",
-      sender: admin.publicKey,
-      tokenAddress,
-      to: tokenHolders[0].publicKey,
-      amount: 1000_000_000_000,
-    });
-
-    const proveTx = await api.proveTransactions({
-      txs: [
-        {
+    const tx = (
+      await api.mintTokens({
+        body: {
+          sender: admin.publicKey,
+          tokenAddress,
+          to: tokenHolders[0].publicKey,
+          amount: 1000_000_000_000,
+        },
+      })
+    ).data;
+    if (!tx) throw new Error("No tx");
+    const proveTx = (
+      await api.prove({
+        body: {
           tx,
           signedData: JSON.stringify(
-            client.signTransaction(tx.minaSignerPayload, admin.privateKey).data
+            client.signTransaction(
+              tx.minaSignerPayload as any,
+              admin.privateKey
+            ).data
           ),
         },
-      ],
-    });
+      })
+    ).data;
+
+    if (!proveTx?.jobId) throw new Error("No jobId");
 
     const proofs = await api.waitForProofs(proveTx.jobId);
     expect(proofs).toBeDefined();
@@ -220,13 +252,19 @@ describe("MinaTokensAPI", () => {
     expect(hash).toBeDefined();
     if (!hash) return;
     await api.waitForTransaction(hash);
-    const tokenInfo = await api.getTokenInfo(tokenAddress);
-    console.log(tokenInfo);
-    step = "minted";
-    const balance = await api.getBalance({
-      tokenAddress,
-      address: tokenHolders[0].publicKey,
+    const tokenInfo = await api.getTokenInfo({
+      body: { tokenAddress },
     });
+    console.log(tokenInfo?.data);
+    step = "minted";
+    const balance = (
+      await api.getTokenBalance({
+        body: {
+          tokenAddress,
+          address: tokenHolders[0].publicKey,
+        },
+      })
+    ).data;
     console.log(`Balance of token holder 0:`, balance);
     expect(balance?.balance).toBe(1000_000_000_000);
   });
@@ -240,26 +278,37 @@ describe("MinaTokensAPI", () => {
 
     console.log("Building bid transaction...");
 
-    const tx = await api.buildTransaction({
-      txType: "bid",
-      sender: tokenHolders[4].publicKey,
-      tokenAddress,
-      amount: 100_000_000_000,
-      price: 100_000_000,
-      whitelist: useWhitelists ? whitelist : undefined,
-    });
-    if (!("bidAddress" in tx.request)) throw new Error("Token not bid");
+    const tx = (
+      await api.tokenBid({
+        body: {
+          sender: tokenHolders[4].publicKey,
+          tokenAddress,
+          amount: 100_000_000_000,
+          price: 100_000_000,
+          whitelist: useWhitelists ? whitelist : undefined,
+        },
+      })
+    ).data;
+    if (!tx) throw new Error("No tx");
+    if (!tx.request || !("bidAddress" in tx.request))
+      throw new Error("Token not bid");
     bidAddress = tx.request.bidAddress;
     if (!bidAddress) throw new Error("Token not bid");
 
-    const proveTx = await api.proveTransaction({
-      tx,
-      signedData: JSON.stringify(
-        client.signTransaction(tx.minaSignerPayload, tokenHolders[4].privateKey)
-          .data
-      ),
-    });
-
+    const proveTx = (
+      await api.prove({
+        body: {
+          tx,
+          signedData: JSON.stringify(
+            client.signTransaction(
+              tx.minaSignerPayload as any,
+              tokenHolders[4].privateKey
+            ).data
+          ),
+        },
+      })
+    ).data;
+    if (!proveTx?.jobId) throw new Error("No jobId");
     const proofs = await api.waitForProofs(proveTx.jobId);
     expect(proofs).toBeDefined();
     if (!proofs) throw new Error("No proofs");
@@ -270,9 +319,13 @@ describe("MinaTokensAPI", () => {
     await api.waitForTransaction(hash);
     console.log("Bid contract address:", bidAddress);
     step = "bid";
-    const balance = await api.getBalance({
-      address: bidAddress,
-    });
+    const balance = (
+      await api.getTokenBalance({
+        body: {
+          address: bidAddress,
+        },
+      })
+    ).data;
     console.log(`Balance of ${bidAddress}:`, balance);
     expect(balance?.balance).toBe(10_000_000_000);
   });
@@ -289,28 +342,32 @@ describe("MinaTokensAPI", () => {
 
     console.log("Building sell transaction...");
 
-    const tx = await api.buildTransaction({
-      txType: "sell",
-      sender: tokenHolders[0].publicKey,
-      tokenAddress,
-      bidAddress,
-      amount: 5_000_000_000,
-    });
-
-    const proveTx = await api.proveTransactions({
-      txs: [
-        {
+    const tx = (
+      await api.sellTokens({
+        body: {
+          sender: tokenHolders[0].publicKey,
+          tokenAddress,
+          bidAddress,
+          amount: 5_000_000_000,
+        },
+      })
+    ).data;
+    if (!tx) throw new Error("No tx");
+    const proveTx = (
+      await api.prove({
+        body: {
           tx,
           signedData: JSON.stringify(
             client.signTransaction(
-              tx.minaSignerPayload,
+              tx.minaSignerPayload as any,
               tokenHolders[0].privateKey
             ).data
           ),
         },
-      ],
-    });
-
+      })
+    ).data;
+    if (!proveTx) throw new Error("No proveTx");
+    if (!proveTx.jobId) throw new Error("No jobId");
     const proofs = await api.waitForProofs(proveTx.jobId);
     expect(proofs).toBeDefined();
     if (!proofs) throw new Error("No proofs");
@@ -320,15 +377,23 @@ describe("MinaTokensAPI", () => {
     if (!hash) return;
     await api.waitForTransaction(hash);
     step = "sold";
-    const balance = await api.getBalance({
-      tokenAddress,
-      address: tokenHolders[0].publicKey,
-    });
+    const balance = (
+      await api.getTokenBalance({
+        body: {
+          tokenAddress,
+          address: tokenHolders[0].publicKey,
+        },
+      })
+    ).data;
     console.log(`Balance of seller:`, balance);
-    const balanceBuyer = await api.getBalance({
-      tokenAddress,
-      address: tokenHolders[4].publicKey,
-    });
+    const balanceBuyer = (
+      await api.getTokenBalance({
+        body: {
+          tokenAddress,
+          address: tokenHolders[4].publicKey,
+        },
+      })
+    ).data;
     console.log(`Balance of buyer:`, balanceBuyer);
     expect(balance?.balance).toBe(995_000_000_000);
     expect(balanceBuyer?.balance).toBe(5_000_000_000);
@@ -343,26 +408,38 @@ describe("MinaTokensAPI", () => {
 
     console.log("Building offer transaction...");
 
-    const tx = await api.buildTransaction({
-      txType: "offer",
-      sender: tokenHolders[0].publicKey,
-      tokenAddress,
-      amount: 500_000_000_000,
-      price: 10_000_000_000,
-      whitelist: useWhitelists ? whitelist : undefined,
-    });
-    if (!("offerAddress" in tx.request)) throw new Error("Token not offered");
+    const tx = (
+      await api.tokenOffer({
+        body: {
+          sender: tokenHolders[0].publicKey,
+          tokenAddress,
+          amount: 500_000_000_000,
+          price: 10_000_000_000,
+          whitelist: useWhitelists ? whitelist : undefined,
+        },
+      })
+    ).data;
+    if (!tx) throw new Error("No tx");
+    if (!tx.request || !("offerAddress" in tx.request))
+      throw new Error("Token not offered");
     offerAddress = tx.request.offerAddress;
     if (!offerAddress) throw new Error("Token not offered");
 
-    const proveTx = await api.proveTransaction({
-      tx,
-      signedData: JSON.stringify(
-        client.signTransaction(tx.minaSignerPayload, tokenHolders[0].privateKey)
-          .data
-      ),
-    });
-
+    const proveTx = (
+      await api.prove({
+        body: {
+          tx,
+          signedData: JSON.stringify(
+            client.signTransaction(
+              tx.minaSignerPayload as any,
+              tokenHolders[0].privateKey
+            ).data
+          ),
+        },
+      })
+    ).data;
+    if (!proveTx) throw new Error("No proveTx");
+    if (!proveTx.jobId) throw new Error("No jobId");
     const proofs = await api.waitForProofs(proveTx.jobId);
     expect(proofs).toBeDefined();
     if (!proofs) throw new Error("No proofs");
@@ -371,20 +448,30 @@ describe("MinaTokensAPI", () => {
     expect(hash).toBeDefined();
     if (!hash) return;
     await api.waitForTransaction(hash);
-    const tokenInfo = await api.getTokenInfo(tokenAddress);
-    console.log(tokenInfo);
+    const tokenInfo = await api.getTokenInfo({
+      body: { tokenAddress },
+    });
+    console.log(tokenInfo?.data);
     console.log("Offer contract address:", offerAddress);
     step = "offered";
-    const balance = await api.getBalance({
-      tokenAddress,
-      address: tokenHolders[0].publicKey,
-    });
+    const balance = (
+      await api.getTokenBalance({
+        body: {
+          tokenAddress,
+          address: tokenHolders[0].publicKey,
+        },
+      })
+    ).data;
     console.log(`Balance of ${tokenHolders[0].publicKey}:`, balance);
     expect(balance?.balance).toBe(495_000_000_000);
-    const balanceOffer = await api.getBalance({
-      tokenAddress,
-      address: offerAddress,
-    });
+    const balanceOffer = (
+      await api.getTokenBalance({
+        body: {
+          tokenAddress,
+          address: offerAddress,
+        },
+      })
+    ).data;
     console.log(`Balance of offer ${offerAddress}:`, balanceOffer);
     expect(balanceOffer?.balance).toBe(500_000_000_000);
   });
@@ -398,9 +485,13 @@ describe("MinaTokensAPI", () => {
       throw new Error("Token not offered");
     }
     expect(step).toBe("offered");
-    const balanceBefore = await api.getBalance({
-      address: tokenHolders[1].publicKey,
-    });
+    const balanceBefore = (
+      await api.getTokenBalance({
+        body: {
+          address: tokenHolders[1].publicKey,
+        },
+      })
+    ).data;
     console.log(
       `Balance of ${tokenHolders[1].publicKey} in MINA:`,
       (balanceBefore?.balance ?? 0) / 1_000_000_000
@@ -408,28 +499,33 @@ describe("MinaTokensAPI", () => {
 
     console.log("Building buy transaction...");
 
-    const tx = await api.buildTransaction({
-      txType: "buy",
-      sender: tokenHolders[1].publicKey,
-      tokenAddress,
-      offerAddress,
-      amount: 10_000_000_000,
-    });
+    const tx = (
+      await api.buyTokens({
+        body: {
+          sender: tokenHolders[1].publicKey,
+          tokenAddress,
+          offerAddress,
+          amount: 10_000_000_000,
+        },
+      })
+    ).data;
+    if (!tx) throw new Error("No tx");
 
-    const proveTx = await api.proveTransactions({
-      txs: [
-        {
+    const proveTx = (
+      await api.prove({
+        body: {
           tx,
           signedData: JSON.stringify(
             client.signTransaction(
-              tx.minaSignerPayload,
+              tx.minaSignerPayload as any,
               tokenHolders[1].privateKey
             ).data
           ),
         },
-      ],
-    });
-
+      })
+    ).data;
+    if (!proveTx) throw new Error("No proveTx");
+    if (!proveTx.jobId) throw new Error("No jobId");
     const proofs = await api.waitForProofs(proveTx.jobId);
     expect(proofs).toBeDefined();
     if (!proofs) throw new Error("No proofs");
@@ -438,24 +534,38 @@ describe("MinaTokensAPI", () => {
     expect(hash).toBeDefined();
     if (!hash) return;
     await api.waitForTransaction(hash);
-    const tokenInfo = await api.getTokenInfo(tokenAddress);
-    console.log(tokenInfo);
+    const tokenInfo = await api.getTokenInfo({
+      body: { tokenAddress },
+    });
+    console.log(tokenInfo?.data);
     step = "bought";
-    const balance = await api.getBalance({
-      tokenAddress,
-      address: tokenHolders[1].publicKey,
-    });
+    const balance = (
+      await api.getTokenBalance({
+        body: {
+          tokenAddress,
+          address: tokenHolders[1].publicKey,
+        },
+      })
+    ).data;
     console.log(`Balance of buyer:`, balance);
-    const balanceOffer = await api.getBalance({
-      tokenAddress,
-      address: offerAddress,
-    });
+    const balanceOffer = (
+      await api.getTokenBalance({
+        body: {
+          tokenAddress,
+          address: offerAddress,
+        },
+      })
+    ).data;
     expect(balance?.balance).toBe(10_000_000_000);
     console.log(`Balance of offer:`, balanceOffer);
     expect(balanceOffer?.balance).toBe(490_000_000_000);
-    const balanceAfter = await api.getBalance({
-      address: tokenHolders[1].publicKey,
-    });
+    const balanceAfter = (
+      await api.getTokenBalance({
+        body: {
+          address: tokenHolders[1].publicKey,
+        },
+      })
+    ).data;
     console.log(
       `Balance of ${tokenHolders[1].publicKey} in MINA:`,
       (balanceAfter?.balance ?? 0) / 1_000_000_000
@@ -479,28 +589,32 @@ describe("MinaTokensAPI", () => {
 
     console.log("Building withdraw transaction...");
 
-    const tx = await api.buildTransaction({
-      txType: "withdrawOffer",
-      sender: tokenHolders[0].publicKey,
-      tokenAddress,
-      offerAddress,
-      amount: 490_000_000_000,
-    });
-
-    const proveTx = await api.proveTransactions({
-      txs: [
-        {
+    const tx = (
+      await api.withdrawTokenOffer({
+        body: {
+          sender: tokenHolders[0].publicKey,
+          tokenAddress,
+          offerAddress,
+          amount: 490_000_000_000,
+        },
+      })
+    ).data;
+    if (!tx) throw new Error("No tx");
+    const proveTx = (
+      await api.prove({
+        body: {
           tx,
           signedData: JSON.stringify(
             client.signTransaction(
-              tx.minaSignerPayload,
+              tx.minaSignerPayload as any,
               tokenHolders[0].privateKey
             ).data
           ),
         },
-      ],
-    });
-
+      })
+    ).data;
+    if (!proveTx) throw new Error("No proveTx");
+    if (!proveTx.jobId) throw new Error("No jobId");
     const proofs = await api.waitForProofs(proveTx.jobId);
     expect(proofs).toBeDefined();
     if (!proofs) throw new Error("No proofs");
@@ -509,19 +623,29 @@ describe("MinaTokensAPI", () => {
     expect(hash).toBeDefined();
     if (!hash) return;
     await api.waitForTransaction(hash);
-    const tokenInfo = await api.getTokenInfo(tokenAddress);
-    console.log(tokenInfo);
-    step = "withdrawn";
-    const balance = await api.getBalance({
-      tokenAddress,
-      address: tokenHolders[0].publicKey,
+    const tokenInfo = await api.getTokenInfo({
+      body: { tokenAddress },
     });
+    console.log(tokenInfo?.data);
+    step = "withdrawn";
+    const balance = (
+      await api.getTokenBalance({
+        body: {
+          tokenAddress,
+          address: tokenHolders[0].publicKey,
+        },
+      })
+    ).data;
     console.log(`Balance of token holder 0:`, balance);
     expect(balance?.balance).toBe(985_000_000_000);
-    const balanceOffer = await api.getBalance({
-      tokenAddress,
-      address: offerAddress,
-    });
+    const balanceOffer = (
+      await api.getTokenBalance({
+        body: {
+          tokenAddress,
+          address: offerAddress,
+        },
+      })
+    ).data;
     console.log(`Balance of offer:`, balanceOffer);
     expect(balanceOffer?.balance).toBe(0);
   });
@@ -535,27 +659,33 @@ describe("MinaTokensAPI", () => {
 
     console.log("Building transfer transaction...");
 
-    const tx = await api.buildTransaction({
-      txType: "transfer",
-      sender: tokenHolders[0].publicKey,
-      tokenAddress,
-      to: tokenHolders[2].publicKey,
-      amount: 50_000_000_000,
-    });
+    const tx = (
+      await api.transferTokens({
+        body: {
+          sender: tokenHolders[0].publicKey,
+          tokenAddress,
+          to: tokenHolders[2].publicKey,
+          amount: 50_000_000_000,
+        },
+      })
+    ).data;
+    if (!tx) throw new Error("No tx");
 
-    const proveTx = await api.proveTransactions({
-      txs: [
-        {
+    const proveTx = (
+      await api.prove({
+        body: {
           tx,
           signedData: JSON.stringify(
             client.signTransaction(
-              tx.minaSignerPayload,
+              tx.minaSignerPayload as any,
               tokenHolders[0].privateKey
             ).data
           ),
         },
-      ],
-    });
+      })
+    ).data;
+    if (!proveTx) throw new Error("No proveTx");
+    if (!proveTx.jobId) throw new Error("No jobId");
     const proofs = await api.waitForProofs(proveTx.jobId);
     expect(proofs).toBeDefined();
     if (!proofs) throw new Error("No proofs");
@@ -564,19 +694,29 @@ describe("MinaTokensAPI", () => {
     expect(hash).toBeDefined();
     if (!hash) return;
     await api.waitForTransaction(hash);
-    const tokenInfo = await api.getTokenInfo(tokenAddress);
-    console.log(tokenInfo);
-    step = "transferred";
-    const balance = await api.getBalance({
-      tokenAddress,
-      address: tokenHolders[0].publicKey,
+    const tokenInfo = await api.getTokenInfo({
+      body: { tokenAddress },
     });
+    console.log(tokenInfo?.data);
+    step = "transferred";
+    const balance = (
+      await api.getTokenBalance({
+        body: {
+          tokenAddress,
+          address: tokenHolders[0].publicKey,
+        },
+      })
+    ).data;
     console.log(`Balance of token holder 0:`, balance);
     expect(balance?.balance).toBe(935_000_000_000);
-    const balanceTransfer = await api.getBalance({
-      tokenAddress,
-      address: tokenHolders[2].publicKey,
-    });
+    const balanceTransfer = (
+      await api.getTokenBalance({
+        body: {
+          tokenAddress,
+          address: tokenHolders[2].publicKey,
+        },
+      })
+    ).data;
     console.log(`Balance of token holder 2:`, balanceTransfer);
     expect(balanceTransfer?.balance).toBe(50_000_000_000);
   });
@@ -595,24 +735,35 @@ describe("MinaTokensAPI", () => {
       amount: 10_000_000_000,
     }));
 
-    const airdrop = await api.buildAirdrop({
-      txType: "airdrop",
-      sender: tokenHolders[0].publicKey,
-      tokenAddress,
-      recipients,
-    });
+    const airdrop = (
+      await api.airdropTokens({
+        body: {
+          sender: tokenHolders[0].publicKey,
+          tokenAddress,
+          recipients,
+        },
+      })
+    ).data;
+    if (!airdrop) throw new Error("No airdrop");
+    if (!airdrop.txs) throw new Error("No txs");
 
-    const proveTx = await api.proveTransactions({
-      txs: airdrop.txs.map((tx) => ({
-        tx,
-        signedData: JSON.stringify(
-          client.signTransaction(
-            tx.minaSignerPayload,
-            tokenHolders[0].privateKey
-          ).data
-        ),
-      })),
-    });
+    const proveTx = (
+      await api.prove({
+        body: {
+          txs: airdrop.txs.map((tx) => ({
+            tx,
+            signedData: JSON.stringify(
+              client.signTransaction(
+                tx.minaSignerPayload as any,
+                tokenHolders[0].privateKey
+              ).data
+            ),
+          })),
+        },
+      })
+    ).data;
+    if (!proveTx) throw new Error("No proveTx");
+    if (!proveTx.jobId) throw new Error("No jobId");
     const proofs = await api.waitForProofs(proveTx.jobId);
     expect(proofs).toBeDefined();
     if (!proofs) throw new Error("No proofs");
@@ -622,13 +773,19 @@ describe("MinaTokensAPI", () => {
       if (!hash) return;
       await api.waitForTransaction(hash);
     }
-    const tokenInfo = await api.getTokenInfo(tokenAddress);
-    console.log(tokenInfo);
-    step = "airdropped";
-    const balance = await api.getBalance({
-      tokenAddress,
-      address: tokenHolders[0].publicKey,
+    const tokenInfo = await api.getTokenInfo({
+      body: { tokenAddress },
     });
+    console.log(tokenInfo?.data);
+    step = "airdropped";
+    const balance = (
+      await api.getTokenBalance({
+        body: {
+          tokenAddress,
+          address: tokenHolders[0].publicKey,
+        },
+      })
+    ).data;
     console.log(`Balance of token holder 0:`, balance);
     expect(balance?.balance).toBe(905_000_000_000);
   });
