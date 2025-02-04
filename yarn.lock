@@ -706,12 +706,12 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@minatokens/api@npm:^0.9.7":
-  version: 0.9.7
-  resolution: "@minatokens/api@npm:0.9.7"
+"@minatokens/api@npm:^0.12.5":
+  version: 0.12.5
+  resolution: "@minatokens/api@npm:0.12.5"
   dependencies:
     "@hey-api/client-fetch": "npm:^0.5.6"
-  checksum: 10c0/3e5ea54612881f644df410317634910d16b5872feb81967e5a144a5d271fee986c1684adee096b46c3369d19847f8561e4bdc5fddf7ea88c3e8cb0d71ca1f245
+  checksum: 10c0/c21ca9f7a2f667eb126214d6907080a6684f9cfdb29ce8fcf509f19dd6b1e202d2d339b0446cdbfc5ccee87f33396776efd19faa52fa18ec6901919f61e96ed0
   languageName: node
   linkType: hard
 
@@ -3305,7 +3305,7 @@ __metadata:
   resolution: "tokens-api-example@workspace:."
   dependencies:
     "@jest/globals": "npm:^29.7.0"
-    "@minatokens/api": "npm:^0.9.7"
+    "@minatokens/api": "npm:^0.12.5"
     "@types/jest": "npm:^29.5.14"
     "@types/node": "npm:^22.10.2"
     jest: "npm:^29.7.0"

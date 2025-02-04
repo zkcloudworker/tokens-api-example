@@ -75,6 +75,16 @@ describe("MinaTokensAPI", () => {
     expect(status?.data?.status).toBe("applied");
   });
 
+  it(`should get contract info`, async () => {
+    console.log("Getting existing contract info...");
+    const info = await api.getContractInfo({
+      body: {
+        address: "B62qpZbUBxR6xomP2PnCuEKY2EduXwPekkeAkasgp6SQ9GGinMUhZGb",
+      },
+    });
+    console.log(info?.data ? JSON.stringify(info.data, null, 2) : "No info");
+  });
+
   it(`should get job result`, async () => {
     console.log("Getting existing job result...");
     const result = await api.getProof({
