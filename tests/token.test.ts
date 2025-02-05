@@ -3,8 +3,14 @@ import Client from "mina-signer";
 import * as api from "@minatokens/api";
 import { TEST_ACCOUNTS, API_KEY } from "../env.json";
 
-type Chain = "zeko" | "devnet";
+type Chain = "zeko" | "devnet" | "mainnet";
 const chain: Chain = "devnet" as Chain;
+const bondingCurve = true as boolean;
+const useWhitelists = false;
+
+if (useWhitelists && bondingCurve)
+  throw Error("Whitelists and bonding curve cannot be used together");
+
 api.config({
   apiKey: API_KEY,
   chain,
@@ -15,7 +21,9 @@ if (debug) {
   process.env.DEBUG = "true";
 }
 
-const client = new Client({ network: "testnet" });
+const client = new Client({
+  network: chain === "mainnet" ? "mainnet" : "testnet",
+});
 
 const exampleTokenAddress =
   "B62qn25cKc4ipqJMCDSMENgsiFwL49vTdnsDXgWWKWFXQaY819rn848";
@@ -43,7 +51,6 @@ describe("MinaTokensAPI", () => {
     tokenHolders.slice(0, 3).map((t) => t.publicKey)
   );
 
-  const useWhitelists = false;
   const whitelist = useWhitelists
     ? [
         { address: tokenHolders[0].publicKey, amount: 1000_000_000_000 },
@@ -52,7 +59,7 @@ describe("MinaTokensAPI", () => {
       ]
     : undefined;
   console.log("Whitelist:", whitelist);
-  const tokenSymbol = "TEST";
+  const tokenSymbol = bondingCurve ? "MEME" : "TEST";
   const tokenDecimals = 9;
   const uri = "https://minatokens.com";
   let step:
@@ -73,6 +80,16 @@ describe("MinaTokensAPI", () => {
       body: { hash: exampleHash },
     });
     expect(status?.data?.status).toBe("applied");
+  });
+
+  it(`should get contract info`, async () => {
+    console.log("Getting existing contract info...");
+    const info = await api.getContractInfo({
+      body: {
+        address: "B62qpZbUBxR6xomP2PnCuEKY2EduXwPekkeAkasgp6SQ9GGinMUhZGb",
+      },
+    });
+    console.log(info?.data ? JSON.stringify(info.data, null, 2) : "No info");
   });
 
   it(`should get job result`, async () => {
@@ -155,10 +172,19 @@ describe("MinaTokensAPI", () => {
     console.log("Deploying new token...");
     console.log("Admin address:", admin.publicKey);
 
+    const adminContract = bondingCurve
+      ? "bondingCurve"
+      : useWhitelists
+      ? "advanced"
+      : "standard";
+
+    console.log("Admin contract:", adminContract);
+    console.log("Sender:", admin.publicKey);
+
     const tx = (
       await api.launchToken({
         body: {
-          adminContract: useWhitelists ? "advanced" : "standard",
+          adminContract,
           sender: admin.publicKey,
           symbol: tokenSymbol,
           decimals: tokenDecimals,
@@ -223,7 +249,8 @@ describe("MinaTokensAPI", () => {
           sender: admin.publicKey,
           tokenAddress,
           to: tokenHolders[0].publicKey,
-          amount: 1000_000_000_000,
+          amount: 1_000_000_000_000 + (bondingCurve ? 300_000_000_000_000 : 0),
+          price: bondingCurve ? 10_000 : undefined,
         },
       })
     ).data;
@@ -266,8 +293,73 @@ describe("MinaTokensAPI", () => {
       })
     ).data;
     console.log(`Balance of token holder 0:`, balance);
-    expect(balance?.balance).toBe(1000_000_000_000);
+    expect(balance?.balance).toBe(
+      1_000_000_000_000 + (bondingCurve ? 300_000_000_000_000 : 0)
+    );
   });
+
+  if (bondingCurve) {
+    it(`should redeem token`, async () => {
+      expect(tokenAddress).toBeDefined();
+      if (!tokenAddress) {
+        throw new Error("Token not deployed");
+      }
+      expect(step).toBe("minted");
+      await new Promise((resolve) => setTimeout(resolve, 30000));
+
+      console.log("Building redeem transaction...");
+
+      const tx = (
+        await api.redeemTokens({
+          body: {
+            sender: tokenHolders[0].publicKey,
+            tokenAddress,
+            amount: 300_000_000_000_000,
+            price: 9_000,
+          },
+        })
+      ).data;
+      if (!tx) throw new Error("No tx");
+      const proveTx = (
+        await api.prove({
+          body: {
+            tx,
+            signedData: JSON.stringify(
+              client.signTransaction(
+                tx.minaSignerPayload as any,
+                tokenHolders[0].privateKey
+              ).data
+            ),
+          },
+        })
+      ).data;
+
+      if (!proveTx?.jobId) throw new Error("No jobId");
+
+      const proofs = await api.waitForProofs(proveTx.jobId);
+      expect(proofs).toBeDefined();
+      if (!proofs) throw new Error("No proofs");
+      expect(proofs.length).toBe(1);
+      const hash = proofs[0];
+      expect(hash).toBeDefined();
+      if (!hash) return;
+      await api.waitForTransaction(hash);
+      const tokenInfo = await api.getTokenInfo({
+        body: { tokenAddress },
+      });
+      console.log(tokenInfo?.data);
+      const balance = (
+        await api.getTokenBalance({
+          body: {
+            tokenAddress,
+            address: tokenHolders[0].publicKey,
+          },
+        })
+      ).data;
+      console.log(`Balance of token holder 0:`, balance);
+      expect(balance?.balance).toBe(1000_000_000_000);
+    });
+  }
 
   it(`should bid`, async () => {
     expect(tokenAddress).toBeDefined();
