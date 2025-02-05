@@ -78,8 +78,9 @@ The MinaTokens API provides the following REST endpoints:
 
 The API is available at:
 
-- Devnet: `https://minatokens.com/api/v1/`
+- Devnet: `https://devnet.minatokens.com/api/v1/`
 - Zeko: `https://zekotokens.com/api/v1/`
+- Mainnet: `https://minatokens.com/api/v1/`
 
 ### API Reference
 
