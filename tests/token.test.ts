@@ -1,10 +1,10 @@
 import { describe, expect, it } from "@jest/globals";
 import Client from "mina-signer";
-import * as api from "@minatokens/api";
+import * as api from "@silvana-one/api";
 import { TEST_ACCOUNTS, API_KEY } from "../env.json";
 
 type Chain = "zeko" | "devnet" | "mainnet";
-const chain: Chain = "devnet" as Chain;
+const chain: Chain = "zeko" as Chain;
 const bondingCurve = true as boolean;
 const useWhitelists = false;
 
@@ -26,7 +26,9 @@ const client = new Client({
 });
 
 const exampleTokenAddress =
-  "B62qn25cKc4ipqJMCDSMENgsiFwL49vTdnsDXgWWKWFXQaY819rn848";
+  chain === "zeko"
+    ? "B62qnmnETnzpkEVvGQ6jE4PR3YVFY6ZEXxYXWvQPmxcZyJJtj9eGiD6"
+    : "B62qn25cKc4ipqJMCDSMENgsiFwL49vTdnsDXgWWKWFXQaY819rn848";
 const exampleJobId = "zkCWDYE3gAJOGRDqNlhke0u1NWVXlWgKS2uk2q0FgZdRbPoF";
 const exampleFailedJobId = "zkCWvcg1BiPdLmsyxexOkrC3qZfx2UdLan0JB30cKDYVeSMB";
 const exampleHash = "5JuEaWqCkiizzjA3mjrva5hjYeohiGKQFcffUdZxrEJM4xDirhK1";
@@ -83,10 +85,10 @@ describe("MinaTokensAPI", () => {
   });
 
   it(`should get contract info`, async () => {
-    console.log("Getting existing contract info...");
+    console.log("Getting existing contract info for", exampleTokenAddress);
     const info = await api.getContractInfo({
       body: {
-        address: "B62qpZbUBxR6xomP2PnCuEKY2EduXwPekkeAkasgp6SQ9GGinMUhZGb",
+        address: exampleTokenAddress,
       },
     });
     console.log(info?.data ? JSON.stringify(info.data, null, 2) : "No info");
@@ -126,22 +128,13 @@ describe("MinaTokensAPI", () => {
   it(`should get existing token info`, async () => {
     console.log("Getting existing token info...");
 
-    if (chain === "devnet") {
-      const tokenInfo = await api.getTokenInfo({
-        body: { tokenAddress: exampleTokenAddress },
-      });
-      expect(tokenInfo?.data?.tokenAddress).toBe(exampleTokenAddress);
-    } else {
-      const tokenInfo = await api.getTokenInfo({
-        body: {
-          tokenAddress:
-            "B62qphSRYqif9bPjw4Kg2G3CA7V7NzHqtpRzeXkY164n3C9jXqGAfkA",
-        },
-      });
-      expect(tokenInfo?.data?.tokenAddress).toBe(
-        "B62qphSRYqif9bPjw4Kg2G3CA7V7NzHqtpRzeXkY164n3C9jXqGAfkA"
-      );
-    }
+    const tokenInfo = await api.getTokenInfo({
+      body: {
+        tokenAddress: exampleTokenAddress,
+      },
+    });
+    console.log(tokenInfo?.data);
+    expect(tokenInfo?.data?.tokenAddress).toBe(exampleTokenAddress);
   });
 
   it.skip(`should get existing NFT info`, async () => {
@@ -227,6 +220,7 @@ describe("MinaTokensAPI", () => {
     expect(hash).toBeDefined();
     if (!hash) throw new Error("No hash");
     await api.waitForTransaction(hash);
+    await new Promise((resolve) => setTimeout(resolve, 10000));
     const tokenInfo = await api.getTokenInfo({
       body: { tokenAddress },
     });
