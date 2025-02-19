@@ -41,7 +41,7 @@ const exampleBalanceRequest = {
 let offerAddress: string | undefined = undefined;
 let bidAddress: string | undefined = undefined;
 
-describe("MinaTokensAPI", () => {
+describe("MinaTokensAPI for Fungible Tokens", () => {
   let tokenAddress: string | undefined = undefined;
 
   const users = TEST_ACCOUNTS;
