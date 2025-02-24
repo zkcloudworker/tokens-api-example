@@ -10,8 +10,13 @@ import {
 } from "../src/random";
 import fs from "fs/promises";
 
+/*
+Frontend: https://devnet.minanft.io/
+API: https://docs.zkcloudworker.com/OpenAPI/launch-nft-collection
+*/
+
 type Chain = "zeko" | "devnet" | "mainnet";
-const chain: Chain = "zeko" as Chain;
+const chain: Chain = "devnet" as Chain;
 const soulBound = true as boolean;
 
 api.config({
@@ -39,15 +44,24 @@ describe("MinaTokensAPI for NFT", () => {
   const users = TEST_ACCOUNTS;
   const creator = users[0];
   const nftHolders = users.slice(1);
-  console.log("creator:", creator.publicKey);
-  console.log(
-    "NFT holders:",
-    nftHolders.slice(0, 3).map((t) => t.publicKey)
-  );
 
-  let step: "started" | "launched" | "minted" = "started";
+  let step: "started" | "launched" | "minted" | "batch" = "started";
+
+  it(`should get NFT info`, async () => {
+    const info = (
+      await api.getNftInfo({
+        body: {
+          collectionAddress:
+            "B62qjRPTy8u1WmqvesxC6VhixvwCzCAFjDjmMwm1LB5viEDTfAWbfz9",
+        },
+      })
+    ).data;
+    console.log("NFT info:", info);
+  });
 
   it(`should launch NFT collection`, async () => {
+    console.log("creator:", creator.publicKey);
+
     const collectionName = randomName();
     console.log(`Launching new NFT collection ${collectionName}...`);
 
@@ -70,14 +84,15 @@ describe("MinaTokensAPI for NFT", () => {
               description: randomText(),
               traits: [
                 {
-                  key: "Collection Trait 1",
+                  key: "Collection Public Trait 1",
                   type: "string",
-                  value: "Collection Value 1",
+                  value: "Collection Public Value 1",
                 },
                 {
-                  key: "Collection Trait 2",
+                  key: "Collection Private Trait 2",
                   type: "string",
-                  value: "Collection Value 2",
+                  value: "Collection Private Value 2",
+                  isPrivate: true,
                 },
               ],
             },
@@ -147,11 +162,15 @@ describe("MinaTokensAPI for NFT", () => {
     expect(hash).toBeDefined();
     if (!hash) throw new Error("No hash");
     await api.waitForTransaction(hash);
-    await new Promise((resolve) => setTimeout(resolve, 10000));
-    // const tokenInfo = await api.getTokenInfo({
-    //   body: { collectionAddress },
-    // });
-    // console.log(tokenInfo?.data);
+    await new Promise((resolve) => setTimeout(resolve, 30000));
+    const info = (
+      await api.getNftInfo({
+        body: {
+          collectionAddress,
+        },
+      })
+    ).data;
+    console.log("Collection info:", info);
     step = "launched";
   });
 
@@ -196,7 +215,8 @@ describe("MinaTokensAPI for NFT", () => {
                 {
                   key: "NFT Trait 2",
                   type: "string",
-                  value: "NFT Value 2",
+                  value: "NFT private value 2",
+                  isPrivate: true,
                 },
               ],
             },
@@ -260,10 +280,177 @@ describe("MinaTokensAPI for NFT", () => {
     expect(hash).toBeDefined();
     if (!hash) return;
     await api.waitForTransaction(hash);
-    // const tokenInfo = await api.getTokenInfo({
-    //   body: { tokenAddress },
-    // });
-    // console.log(tokenInfo?.data);
+    await new Promise((resolve) => setTimeout(resolve, 30000));
+    const status = await api.txStatus({
+      body: { hash },
+    });
+    console.log("Tx status:", hash, status?.data);
+    expect(status?.data?.status).toBe("applied");
+    const info = (
+      await api.getNftInfo({
+        body: {
+          collectionAddress,
+          nftAddress,
+        },
+      })
+    ).data;
+    console.log("NFT info:", info);
     step = "minted";
+  });
+
+  it(`should mint batch of NFTs`, async () => {
+    expect(collectionAddress).toBeDefined();
+    if (!collectionAddress) {
+      throw new Error("NFT collection is not deployed");
+    }
+    expect(step).toBe("minted");
+    console.log("Minting batch of NFTs...");
+    console.log(
+      "Batch NFT holders:",
+      nftHolders.slice(0, 3).map((t) => t.publicKey)
+    );
+    const nonceData = (
+      await api.getNonce({
+        body: { address: creator.publicKey },
+      })
+    ).data;
+    if (!nonceData) throw new Error("No nonce");
+    console.log("Creator:", creator.publicKey);
+    console.log("Creator nonce:", nonceData);
+    let nonce = nonceData?.nonce;
+    if (!nonce) throw new Error("No nonce");
+    const BATCH_SIZE = 3;
+    const hashes: string[] = [];
+    const nftAddresses: string[] = [];
+    for (let i = 0; i < BATCH_SIZE; i++) {
+      const nftName = randomName();
+      console.log(`Minting NFT ${nftName}...`);
+
+      const tx = (
+        await api.mintNft({
+          body: {
+            txType: "nft:mint",
+            sender: creator.publicKey,
+            nonce: nonce++, // IMPORTANT for batch minting
+            collectionAddress,
+            nftMintParams: {
+              name: nftName,
+              data: {
+                owner: nftHolders[i].publicKey,
+                canApprove: !soulBound,
+                canTransfer: !soulBound,
+                canChangeMetadata: false,
+                canChangeMetadataVerificationKeyHash: false,
+                canChangeName: false,
+                canChangeOwnerByProof: false,
+                canChangeStorage: false,
+                canPause: true,
+              },
+              metadata: {
+                name: nftName,
+                image: randomImage(),
+                description: randomText(),
+                traits: [
+                  {
+                    key: "NFT Trait 1",
+                    type: "string",
+                    value: "NFT Value 1",
+                  },
+                  {
+                    key: "NFT Trait 2",
+                    type: "string",
+                    value: "NFT private value 2",
+                    isPrivate: true,
+                  },
+                ],
+              },
+            },
+          },
+        })
+      ).data;
+      if (!tx) throw new Error("No tx");
+      const nftMintParams = (tx?.request as api.NftMintTransactionParams)
+        .nftMintParams;
+      const nftAddress = nftMintParams?.address;
+      if (!nftAddress) throw new Error("NFT not minted");
+      nftAddresses.push(nftAddress);
+      console.log("NFT address:", nftAddress);
+      console.log("Storage address:", tx?.storage);
+      console.log("Metadata root:", tx?.metadataRoot);
+      if (tx?.privateMetadata && collectionAddress && nftAddress) {
+        await fs.writeFile(
+          `./data/nft-${collectionAddress}-${nftAddress}.json`,
+          tx.privateMetadata
+        );
+      }
+      if (collectionAddress) {
+        await fs.writeFile(
+          `./data/nft-${collectionAddress}-${nftAddress}-keys.json`,
+          JSON.stringify(
+            {
+              nftName,
+              collectionName: tx?.collectionName,
+              collectionAddress,
+              nftAddress,
+              nftContractPrivateKey: nftMintParams?.addressPrivateKey,
+              storage: tx?.storage,
+              metadataRoot: tx?.metadataRoot,
+            },
+            null,
+            2
+          )
+        );
+      }
+      const proveTx = (
+        await api.prove({
+          body: {
+            tx,
+            signedData: JSON.stringify(
+              client.signTransaction(
+                tx.minaSignerPayload as any,
+                creator.privateKey
+              ).data
+            ),
+          },
+        })
+      ).data;
+
+      if (!proveTx?.jobId) throw new Error("No jobId");
+
+      const proofs = await api.waitForProofs(proveTx.jobId);
+      expect(proofs).toBeDefined();
+      if (!proofs) throw new Error("No proofs");
+      expect(proofs.length).toBe(1);
+      const hash = proofs[0];
+      console.log("Minting NFT tx hash:", hash);
+      expect(hash).toBeDefined();
+      if (!hash) return;
+      hashes.push(hash);
+    }
+    console.log("Waiting for batch of NFTs tx to be included in a block...");
+    for (const hash of hashes) {
+      await api.waitForTransaction(hash);
+      const status = await api.txStatus({
+        body: { hash },
+      });
+      console.log("Tx status:", hash, status?.data);
+      expect(status?.data?.status).toBe("applied");
+    }
+    await new Promise((resolve) => setTimeout(resolve, 60000));
+    for (const nftAddress of nftAddresses) {
+      const info =
+        // IMPORTANT to call it after the tx is included into block to get NFT indexed on https://devnet.minanft.io/
+        (
+          await api.getNftInfo({
+            body: {
+              collectionAddress,
+              nftAddress,
+            },
+          })
+        ).data;
+      console.log("NFT info:", info);
+    }
+
+    step = "batch";
   });
 });

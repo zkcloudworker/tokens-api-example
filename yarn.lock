@@ -736,12 +736,12 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@silvana-one/api@npm:^0.1.7":
-  version: 0.1.7
-  resolution: "@silvana-one/api@npm:0.1.7"
+"@silvana-one/api@npm:^0.1.16":
+  version: 0.1.16
+  resolution: "@silvana-one/api@npm:0.1.16"
   dependencies:
     "@hey-api/client-fetch": "npm:^0.8.1"
-  checksum: 10c0/7261ce95de7ff046200e4d256cb3b1401da5238c5254c061964bf807b1733ea06b0b9cf47d957a561f9352a683c368dd22f510a9c1e6a38fc3c7a0354be7122d
+  checksum: 10c0/ffa2da74f0c1c2d8ace5a5c9ec0ed281fff3de0c4544c994c8f8d73ccb42befca0e8e9065b4f08087ad7420ffb88cfe4c83f05f1cda8f0292a46affa95e04339
   languageName: node
   linkType: hard
 
@@ -871,12 +871,12 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@types/node@npm:^22.13.4":
-  version: 22.13.4
-  resolution: "@types/node@npm:22.13.4"
+"@types/node@npm:^22.13.5":
+  version: 22.13.5
+  resolution: "@types/node@npm:22.13.5"
   dependencies:
     undici-types: "npm:~6.20.0"
-  checksum: 10c0/3a234fa7766a3efc382cf81f66f474c26cdab2f54f43f757634c81c0444eb2160c2dabbde9741e4983078a318a88515b65416b5f1ab5478548579d7b3ead1d95
+  checksum: 10c0/a2e7ed7bb0690e439004779baedeb05159c5cc41ef6d81c7a6ebea5303fde4033669e1c0e41ff7453b45fd2fea8dbd55fddfcd052950c7fcae3167c970bca725
   languageName: node
   linkType: hard
 
@@ -3050,7 +3050,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"semver@npm:^7.3.5, semver@npm:^7.5.3, semver@npm:^7.5.4, semver@npm:^7.6.3":
+"semver@npm:^7.3.5, semver@npm:^7.5.3, semver@npm:^7.5.4, semver@npm:^7.7.1":
   version: 7.7.1
   resolution: "semver@npm:7.7.1"
   bin:
@@ -3322,21 +3322,21 @@ __metadata:
   resolution: "tokens-api-example@workspace:."
   dependencies:
     "@jest/globals": "npm:^29.7.0"
-    "@silvana-one/api": "npm:^0.1.7"
+    "@silvana-one/api": "npm:^0.1.16"
     "@types/jest": "npm:^29.5.14"
-    "@types/node": "npm:^22.13.4"
+    "@types/node": "npm:^22.13.5"
     jest: "npm:^29.7.0"
     mina-signer: "npm:^3.0.7"
-    ts-jest: "npm:^29.2.5"
+    ts-jest: "npm:^29.2.6"
     tslib: "npm:^2.8.1"
     typescript: "npm:^5.7.3"
     unique-names-generator: "npm:^4.7.1"
   languageName: unknown
   linkType: soft
 
-"ts-jest@npm:^29.2.5":
-  version: 29.2.5
-  resolution: "ts-jest@npm:29.2.5"
+"ts-jest@npm:^29.2.6":
+  version: 29.2.6
+  resolution: "ts-jest@npm:29.2.6"
   dependencies:
     bs-logger: "npm:^0.2.6"
     ejs: "npm:^3.1.10"
@@ -3345,7 +3345,7 @@ __metadata:
     json5: "npm:^2.2.3"
     lodash.memoize: "npm:^4.1.2"
     make-error: "npm:^1.3.6"
-    semver: "npm:^7.6.3"
+    semver: "npm:^7.7.1"
     yargs-parser: "npm:^21.1.1"
   peerDependencies:
     "@babel/core": ">=7.0.0-beta.0 <8"
@@ -3367,7 +3367,7 @@ __metadata:
       optional: true
   bin:
     ts-jest: cli.js
-  checksum: 10c0/acb62d168faec073e64b20873b583974ba8acecdb94681164eb346cef82ade8fb481c5b979363e01a97ce4dd1e793baf64d9efd90720bc941ad7fc1c3d6f3f68
+  checksum: 10c0/2a79bdb2631bbd004cd6ec171d62dc3681b86e7d1c20eece7f56e7c3df11a0f5a14f4831960b1ba8d1836787395c8f9dcbd084fd7f59246bbee8048feb93f892
   languageName: node
   linkType: hard
 
