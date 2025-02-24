@@ -141,7 +141,7 @@ describe("MinaTokensAPI for Fungible Tokens", () => {
     console.log("Getting existing NFT info...");
     const nftInfo = await api.getNftV2Info({
       body: {
-        contractAddress:
+        collectionAddress:
           "B62qs2NthDuxAT94tTFg6MtuaP1gaBxTZyNv9D3uQiQciy1VsaimNFT",
         nftAddress: exampleNFTAddress,
       },

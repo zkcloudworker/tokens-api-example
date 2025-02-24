@@ -11,7 +11,7 @@ import {
 import fs from "fs/promises";
 
 type Chain = "zeko" | "devnet" | "mainnet";
-const chain: Chain = "zeko" as Chain;
+const chain: Chain = "devnet" as Chain;
 const soulBound = true as boolean;
 
 api.config({
@@ -39,15 +39,30 @@ describe("MinaTokensAPI for NFT", () => {
   const users = TEST_ACCOUNTS;
   const creator = users[0];
   const nftHolders = users.slice(1);
-  console.log("creator:", creator.publicKey);
-  console.log(
-    "NFT holders:",
-    nftHolders.slice(0, 3).map((t) => t.publicKey)
-  );
 
   let step: "started" | "launched" | "minted" = "started";
 
+  it(`should get NFT info`, async () => {
+    const collectionName = randomName();
+    console.log(`Launching new NFT collection ${collectionName}...`);
+
+    const info = (
+      await api.getNftInfo({
+        body: {
+          collectionAddress:
+            "B62qjRPTy8u1WmqvesxC6VhixvwCzCAFjDjmMwm1LB5viEDTfAWbfz9",
+        },
+      })
+    ).data;
+    console.log("NFT info:", info);
+  });
+
   it(`should launch NFT collection`, async () => {
+    console.log("creator:", creator.publicKey);
+    console.log(
+      "NFT holders:",
+      nftHolders.slice(0, 3).map((t) => t.publicKey)
+    );
     const collectionName = randomName();
     console.log(`Launching new NFT collection ${collectionName}...`);
 
