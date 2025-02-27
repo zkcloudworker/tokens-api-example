@@ -40,12 +40,13 @@ const exampleNftAddress =
 
 describe("MinaTokensAPI for NFT", () => {
   let collectionAddress: string | undefined = undefined;
-
+  let nftAddress: string | undefined = undefined;
   const users = TEST_ACCOUNTS;
   const creator = users[0];
   const nftHolders = users.slice(1);
 
-  let step: "started" | "launched" | "minted" | "batch" = "started";
+  let step: "started" | "launched" | "minted" | "transferred" | "batch" =
+    "started";
 
   it(`should get NFT info`, async () => {
     const info = (
@@ -227,7 +228,7 @@ describe("MinaTokensAPI for NFT", () => {
     if (!tx) throw new Error("No tx");
     const nftMintParams = (tx?.request as api.NftMintTransactionParams)
       .nftMintParams;
-    const nftAddress = nftMintParams?.address;
+    nftAddress = nftMintParams?.address;
     if (!nftAddress) throw new Error("NFT not minted");
     console.log("NFT address:", nftAddress);
     console.log("Storage address:", tx?.storage);
@@ -295,7 +296,80 @@ describe("MinaTokensAPI for NFT", () => {
       })
     ).data;
     console.log("NFT info:", info);
+    expect(info?.nft.owner).toBe(creator.publicKey);
     step = "minted";
+  });
+
+  it(`should transfer NFT`, async () => {
+    expect(collectionAddress).toBeDefined();
+    if (!collectionAddress) {
+      throw new Error("NFT collection is not deployed");
+    }
+    if (!nftAddress) {
+      throw new Error("NFT is not minted");
+    }
+    expect(step).toBe("minted");
+    console.log(`Transferring NFT...`);
+
+    const tx = (
+      await api.transferNft({
+        body: {
+          txType: "nft:transfer",
+          sender: creator.publicKey,
+          collectionAddress,
+          nftAddress,
+          nftTransferParams: {
+            from: creator.publicKey,
+            to: nftHolders[0].publicKey,
+          },
+        },
+      })
+    ).data;
+    if (!tx) throw new Error("No tx");
+
+    const proveTx = (
+      await api.prove({
+        body: {
+          tx,
+          signedData: JSON.stringify(
+            client.signTransaction(
+              tx.minaSignerPayload as any,
+              creator.privateKey
+            ).data
+          ),
+        },
+      })
+    ).data;
+
+    if (!proveTx?.jobId) throw new Error("No jobId");
+
+    const proofs = await api.waitForProofs(proveTx.jobId);
+    expect(proofs).toBeDefined();
+    if (!proofs) throw new Error("No proofs");
+    expect(proofs.length).toBe(1);
+    const hash = proofs[0];
+    expect(hash).toBeDefined();
+    if (!hash) return;
+    await api.waitForTransaction(hash);
+    await new Promise((resolve) => setTimeout(resolve, 30000));
+    const status = await api.txStatus({
+      body: { hash },
+    });
+    console.log("Tx status:", hash, status?.data);
+    expect(status?.data?.status).toBe("applied");
+    const info = (
+      await api.getNftInfo({
+        body: {
+          collectionAddress,
+          nftAddress,
+        },
+      })
+    ).data;
+    console.log("Old owner:", creator.publicKey);
+    console.log("New owner:", nftHolders[0].publicKey);
+    console.log("NFT info:", info);
+    expect(info?.nft.owner).toBe(nftHolders[0].publicKey);
+    step = "transferred";
   });
 
   it(`should mint batch of NFTs`, async () => {
@@ -303,7 +377,7 @@ describe("MinaTokensAPI for NFT", () => {
     if (!collectionAddress) {
       throw new Error("NFT collection is not deployed");
     }
-    expect(step).toBe("minted");
+    expect(step).toBe("transferred");
     console.log("Minting batch of NFTs...");
     console.log(
       "Batch NFT holders:",
